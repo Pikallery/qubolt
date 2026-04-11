@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: q-loop-postgres
+    environment:
+      POSTGRES_USER: qloop
+      POSTGRES_PASSWORD: qloop_secret
+      POSTGRES_DB: qloop_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qloop -d qloop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: q-loop-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: q-loop-backend
+    env_file: .env
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://qloop:qloop_secret@postgres:5432/qloop_db"
+      DATABASE_URL_SYNC: "postgresql+psycopg2://qloop:qloop_secret@postgres:5432/qloop_db"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+      MAX_UPLOAD_SIZE_MB: "200"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - upload_data:/app/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: q-loop-worker
+    env_file: .env
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://qloop:qloop_secret@postgres:5432/qloop_db"
+      DATABASE_URL_SYNC: "postgresql+psycopg2://qloop:qloop_secret@postgres:5432/qloop_db"
+      REDIS_URL: "redis://redis:6379/0"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - upload_data:/app/uploads
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=4 -Q celery,ingestion,routing
+
+volumes:
+  postgres_data:
+  redis_data:
+  upload_data:

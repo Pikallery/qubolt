@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "q-loop-backend"
+version = "0.1.0"
+description = "Q-Loop Supply Chain Optimization Backend"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Web framework
+    "fastapi==0.115.5",
+    "uvicorn[standard]==0.32.1",
+    "python-multipart==0.0.12",
+
+    # Database
+    "sqlalchemy[asyncio]==2.0.36",
+    "asyncpg==0.30.0",
+    "psycopg2-binary==2.9.10",
+    "alembic==1.14.0",
+
+    # Validation
+    "pydantic==2.10.3",
+    "pydantic-settings==2.6.1",
+    "email-validator==2.2.0",
+
+    # Security / Auth
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "bcrypt>=4.0,<5",
+    "cryptography==43.0.3",
+
+    # QR Codes
+    "qrcode[pil]==8.0",
+    "Pillow==11.0.0",
+
+    # HTTP Client (DeepSeek / NVIDIA API)
+    "httpx==0.28.1",
+    "openai==1.57.4",
+
+    # Task Queue
+    "celery[redis]==5.4.0",
+    "redis==5.2.1",
+    "flower==2.0.1",
+
+    # Twilio
+    "twilio==9.3.7",
+
+    # Geo / Math
+    "numpy==2.2.0",
+    "scipy==1.14.1",
+
+    # CSV / Data
+    "pandas==2.2.3",
+    "python-dateutil==2.9.0.post0",
+
+    # Utilities
+    "structlog==24.4.0",
+    "tenacity==9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
+    "httpx==0.28.1",
+    "factory-boy==3.3.1",
+    "faker==33.1.0",
+    "ruff==0.8.4",
+    "mypy==1.13.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
