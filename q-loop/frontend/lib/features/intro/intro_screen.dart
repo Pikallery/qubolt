@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 
-// ── Vehicle types for the race ─────────────────────────────────────────────
-
 enum _VType { truck, minivan, auto, bike }
 
 class IntroScreen extends StatefulWidget {
@@ -15,9 +13,10 @@ class IntroScreen extends StatefulWidget {
   State<IntroScreen> createState() => _IntroScreenState();
 }
 
-class _IntroScreenState extends State<IntroScreen> with TickerProviderStateMixin {
-  late final AnimationController _loop;   // continuous scene loop
-  late final AnimationController _accel;  // tap → accelerate off-screen
+class _IntroScreenState extends State<IntroScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController _loop;
+  late final AnimationController _accel;
   bool _started = false;
 
   @override
@@ -43,11 +42,14 @@ class _IntroScreenState extends State<IntroScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final size   = MediaQuery.of(context).size;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? AppColors.obsidian : const Color(0xFFF0F6FF);
+
     return Scaffold(
-      backgroundColor: AppColors.obsidian,
+      backgroundColor: bgColor,
       body: Column(children: [
-        // ── Scene (top ~62%) ────────────────────────────────────────────────
+        // ── Scene ───────────────────────────────────────────────────────────
         SizedBox(
           height: size.height * 0.62,
           width: size.width,
@@ -57,8 +59,9 @@ class _IntroScreenState extends State<IntroScreen> with TickerProviderStateMixin
               builder: (_, __) => CustomPaint(
                 size: Size(size.width, size.height * 0.62),
                 painter: _ScenePainter(
-                  loop: _loop.value,
-                  accel: _accel.value,
+                  loop:   _loop.value,
+                  accel:  _accel.value,
+                  isDark: isDark,
                 ),
               ),
             ),
@@ -87,18 +90,19 @@ class _IntroScreenState extends State<IntroScreen> with TickerProviderStateMixin
                 const SizedBox(height: 6),
                 Text('Quantum-Powered Last-Mile Logistics',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: isDark
+                        ? AppColors.textSecondary
+                        : AppColors.lightTextSecondary,
                     fontSize: 13,
                     letterSpacing: 0.6,
                   )),
                 const SizedBox(height: 28),
-                // Glowing CTA button
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.quantumAccent.withOpacity(0.45),
+                        color: AppColors.quantumAccent.withValues(alpha: 0.45),
                         blurRadius: 24,
                         spreadRadius: 2,
                       ),
@@ -132,10 +136,14 @@ class _IntroScreenState extends State<IntroScreen> with TickerProviderStateMixin
                   onTap: () => context.go('/login'),
                   child: Text('Already have an account? Sign in',
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: isDark
+                          ? AppColors.textSecondary
+                          : AppColors.lightTextSecondary,
                       fontSize: 12,
                       decoration: TextDecoration.underline,
-                      decorationColor: AppColors.textSecondary,
+                      decorationColor: isDark
+                          ? AppColors.textSecondary
+                          : AppColors.lightTextSecondary,
                     )),
                 ),
               ],
@@ -150,18 +158,29 @@ class _IntroScreenState extends State<IntroScreen> with TickerProviderStateMixin
 // ── Scene Painter ──────────────────────────────────────────────────────────────
 
 class _ScenePainter extends CustomPainter {
-  final double loop;   // 0–1 continuous
-  final double accel;  // 0–1 on tap
+  final double loop;
+  final double accel;
+  final bool isDark;
 
-  const _ScenePainter({required this.loop, required this.accel});
+  const _ScenePainter({
+    required this.loop,
+    required this.accel,
+    required this.isDark,
+  });
 
-  // Vehicle configs: (type, laneYFrac, jitterPhase, jitterAmp, colorTint)
   static const _kVehicles = [
     (_VType.truck,   0.28, 0.00, 0.12),
     (_VType.minivan, 0.48, 1.40, 0.09),
     (_VType.auto,    0.66, 2.80, 0.14),
     (_VType.bike,    0.82, 0.90, 0.10),
   ];
+
+  // Light-mode palette
+  static const _lightBg1   = Color(0xFFF0F6FF);
+  static const _lightBg2   = Color(0xFFE4EFFC);
+  static const _lightRoad  = Color(0xFFCDD8E6);
+  static const _lightLane  = Color(0xFFB0BEC9);
+  static const _lightTree  = Color(0xFF1E4A2C);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -174,24 +193,23 @@ class _ScenePainter extends CustomPainter {
     _drawVignette(canvas, size);
   }
 
-  // ── Background ─────────────────────────────────────────────────────────────
   void _drawBg(Canvas canvas, Size size) {
     final paint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFF05080F), Color(0xFF080E16), Color(0xFF0D1117)],
-        stops: [0, 0.45, 1],
+        colors: isDark
+            ? const [Color(0xFF05080F), Color(0xFF080E16), Color(0xFF0D1117)]
+            : const [_lightBg1, _lightBg2, Color(0xFFDAEAF8)],
+        stops: const [0, 0.45, 1],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
   }
 
-  // ── Quantum data nodes ─────────────────────────────────────────────────────
   void _drawQuantumNodes(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height * 0.52;
-    const seed = 42;
-    final rng = math.Random(seed);
+    final rng = math.Random(42);
 
     final nodes = List.generate(22, (i) {
       final rawX = (rng.nextDouble() + loop * 0.18) % 1.0;
@@ -199,30 +217,33 @@ class _ScenePainter extends CustomPainter {
       return Offset(rawX * w, rawY * h);
     });
 
+    final nodeColor = isDark
+        ? AppColors.quantumAccent
+        : AppColors.primary;
+
     final linePaint = Paint()..strokeWidth = 0.5;
     for (int i = 0; i < nodes.length; i++) {
       for (int j = i + 1; j < nodes.length; j++) {
         final d = (nodes[i] - nodes[j]).distance;
         if (d < w * 0.22) {
-          linePaint.color = AppColors.quantumAccent
-              .withOpacity(0.07 * (1 - d / (w * 0.22)));
+          linePaint.color = nodeColor.withValues(
+              alpha: (isDark ? 0.07 : 0.14) * (1 - d / (w * 0.22)));
           canvas.drawLine(nodes[i], nodes[j], linePaint);
         }
       }
     }
 
-    final dotPaint = Paint()..color = AppColors.quantumAccent.withOpacity(0.35);
+    final dotPaint = Paint()
+      ..color = nodeColor.withValues(alpha: isDark ? 0.38 : 0.55);
     for (final n in nodes) {
       canvas.drawCircle(n, 1.8, dotPaint);
-      // Tiny glow
       canvas.drawCircle(n, 4,
         Paint()
-          ..color = AppColors.quantumAccent.withOpacity(0.06)
+          ..color = nodeColor.withValues(alpha: isDark ? 0.07 : 0.12)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
     }
   }
 
-  // ── Trees ──────────────────────────────────────────────────────────────────
   void _drawTrees(Canvas canvas, Size size, {required int layer}) {
     final w = size.width;
     final h = size.height;
@@ -232,79 +253,76 @@ class _ScenePainter extends CustomPainter {
     final tH      = layer == 0 ? h * 0.11 : h * 0.17;
     final tW      = layer == 0 ? w * 0.035 : w * 0.055;
     final yBase   = layer == 0 ? roadY - tH * 0.95 : roadY - tH;
-    final opacity = layer == 0 ? 0.22 : 0.42;
     final count   = layer == 0 ? 14 : 9;
 
+    final treeColor = isDark
+        ? const Color(0xFF0E1F0E).withValues(alpha: layer == 0 ? 0.22 : 0.42)
+        : _lightTree.withValues(alpha: layer == 0 ? 0.28 : 0.55);
+
     final treePaint = Paint()
-      ..color = const Color(0xFF0E1F0E).withOpacity(opacity)
+      ..color = treeColor
       ..style = PaintingStyle.fill;
 
-    // Subtle green edge glow for near trees
     final glowPaint = layer == 1
         ? (Paint()
-          ..color = const Color(0xFF00D080).withOpacity(0.05)
+          ..color = (isDark
+              ? const Color(0xFF00D080)
+              : const Color(0xFF1A6B3A)).withValues(alpha: isDark ? 0.06 : 0.10)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6))
         : null;
 
     for (int i = 0; i < count; i++) {
       final baseX = ((i / count + loop * speed) % 1.0) * (w + tW * 2) - tW;
-
-      // Trunk
       canvas.drawRect(
         Rect.fromLTWH(baseX + tW * 0.4, yBase + tH * 0.62, tW * 0.22, tH * 0.38),
         treePaint,
       );
-
-      // Crown (triangle)
       final crown = Path()
         ..moveTo(baseX + tW * 0.5, yBase)
         ..lineTo(baseX + tW, yBase + tH * 0.65)
         ..lineTo(baseX, yBase + tH * 0.65)
         ..close();
       canvas.drawPath(crown, treePaint);
-
       if (glowPaint != null) canvas.drawPath(crown, glowPaint);
     }
   }
 
-  // ── Road ───────────────────────────────────────────────────────────────────
   void _drawRoad(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
     final roadTop = h * 0.54;
 
-    // Road surface
     canvas.drawRect(
       Rect.fromLTWH(0, roadTop, w, h - roadTop),
-      Paint()..color = const Color(0xFF10161E),
+      Paint()..color = isDark ? const Color(0xFF10161E) : _lightRoad,
     );
 
-    // Road top edge
     canvas.drawLine(
       Offset(0, roadTop),
       Offset(w, roadTop),
-      Paint()..color = const Color(0xFF253040)..strokeWidth = 1.5,
+      Paint()
+        ..color = isDark ? const Color(0xFF253040) : const Color(0xFFABBBC9)
+        ..strokeWidth = 1.5,
     );
 
-    // Three lane dividers
     final divPaint = Paint()
-      ..color = const Color(0xFF1C2A3A).withOpacity(0.6)
+      ..color = (isDark ? const Color(0xFF1C2A3A) : _lightLane)
+          .withValues(alpha: 0.6)
       ..strokeWidth = 1;
     for (int lane = 1; lane <= 3; lane++) {
       final y = roadTop + (h - roadTop) * (lane / 4.0);
       canvas.drawLine(Offset(0, y), Offset(w, y), divPaint);
     }
 
-    // Scrolling dashes on center lane
     final dashPaint = Paint()
-      ..color = const Color(0xFF2E4255).withOpacity(0.8)
+      ..color = (isDark ? const Color(0xFF2E4255) : const Color(0xFF8FA8BF))
+          .withValues(alpha: 0.8)
       ..strokeWidth = 2;
     final dashLen = w * 0.07;
     final gapLen  = w * 0.05;
     final step    = dashLen + gapLen;
     final offset  = loop * step * 4;
     final midY    = roadTop + (h - roadTop) * 0.5;
-
     double x = -(offset % step);
     while (x < w + dashLen) {
       canvas.drawLine(Offset(x, midY), Offset(x + dashLen, midY), dashPaint);
@@ -312,27 +330,19 @@ class _ScenePainter extends CustomPainter {
     }
   }
 
-  // ── Vehicles ───────────────────────────────────────────────────────────────
   void _drawVehicles(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
+    final w       = size.width;
+    final h       = size.height;
     final roadTop = h * 0.54;
     final roadH   = h - roadTop;
 
     for (final v in _kVehicles) {
-      // Competition jitter: each vehicle surges ahead/drops back at different rates
       final jitter = math.sin(loop * math.pi * 5 + v.$3) * v.$4;
       double xFrac = 0.32 + jitter;
-
-      // On acceleration: shoot off screen to the right
       if (accel > 0) xFrac += accel * accel * 1.8;
-
       final x = w * xFrac;
       final y = roadTop + roadH * v.$2;
-
-      // Road-bump vertical jitter
       final yBump = math.sin(loop * math.pi * 9 + v.$3) * 1.5;
-
       _drawVehicle(canvas, v.$1, Offset(x, y + yBump), size);
     }
   }
@@ -340,163 +350,249 @@ class _ScenePainter extends CustomPainter {
   void _drawVehicle(Canvas canvas, _VType type, Offset pos, Size size) {
     final s = size.width * 0.05;
 
-    // Glow
+    final fillColor = isDark
+        ? AppColors.quantumAccent.withValues(alpha: 0.14)
+        : AppColors.primary.withValues(alpha: 0.18);
+    final glowAlpha = isDark ? 0.15 : 0.22;
+    final strokeAlpha = isDark ? 0.88 : 0.95;
+
+    final fill = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
+
     final glow = Paint()
-      ..color = AppColors.quantumAccent.withOpacity(0.13)
+      ..color = (isDark ? AppColors.quantumAccent : AppColors.primary)
+          .withValues(alpha: glowAlpha)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7);
 
-    // Stroke
     final stroke = Paint()
-      ..color = AppColors.quantumAccent.withOpacity(0.88)
+      ..color = (isDark ? AppColors.quantumAccent : AppColors.primary)
+          .withValues(alpha: strokeAlpha)
       ..strokeWidth = 1.6
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
     switch (type) {
-      case _VType.truck:   _truck(canvas, pos, s, glow, stroke);
-      case _VType.minivan: _minivan(canvas, pos, s, glow, stroke);
-      case _VType.auto:    _auto(canvas, pos, s, glow, stroke);
-      case _VType.bike:    _bike(canvas, pos, s, glow, stroke);
+      case _VType.truck:   _truck(canvas, pos, s, fill, glow, stroke);
+      case _VType.minivan: _minivan(canvas, pos, s, fill, glow, stroke);
+      case _VType.auto:    _auto(canvas, pos, s, fill, glow, stroke);
+      case _VType.bike:    _bike(canvas, pos, s, fill, glow, stroke);
     }
   }
 
-  void _truck(Canvas canvas, Offset p, double s, Paint glow, Paint stroke) {
-    final paths = [
-      // Cab
-      Path()..addRRect(RRect.fromRectAndCorners(
-        Rect.fromLTWH(p.dx, p.dy - s * 0.9, s, s * 0.9),
-        topLeft: const Radius.circular(3), topRight: const Radius.circular(3),
-      )),
-      // Trailer
-      Path()..addRect(Rect.fromLTWH(p.dx + s, p.dy - s * 0.75, s * 1.9, s * 0.75)),
-      // Wheels
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 0.25, p.dy + s * 0.12), radius: s * 0.2)),
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 1.55, p.dy + s * 0.12), radius: s * 0.2)),
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 2.4, p.dy + s * 0.12), radius: s * 0.2)),
-      // Cab window
-      Path()..addRect(Rect.fromLTWH(p.dx + s * 0.12, p.dy - s * 0.78, s * 0.7, s * 0.42)),
-    ];
-    for (final path in paths) {
-      canvas.drawPath(path, glow);
-      canvas.drawPath(path, stroke);
+  void _drawShape(Canvas canvas, Path path, Paint fill, Paint glow, Paint stroke) {
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, glow);
+    canvas.drawPath(path, stroke);
+  }
+
+  void _drawLine(Canvas canvas, Path path, Paint glow, Paint stroke) {
+    canvas.drawPath(path, glow);
+    canvas.drawPath(path, stroke);
+  }
+
+  void _truck(Canvas canvas, Offset p, double s, Paint fill, Paint glow, Paint stroke) {
+    // Cab
+    _drawShape(canvas, Path()..addRRect(RRect.fromRectAndCorners(
+      Rect.fromLTWH(p.dx, p.dy - s * 0.9, s, s * 0.9),
+      topLeft: const Radius.circular(3), topRight: const Radius.circular(3),
+    )), fill, glow, stroke);
+    // Trailer
+    _drawShape(canvas, Path()..addRect(
+      Rect.fromLTWH(p.dx + s, p.dy - s * 0.75, s * 1.9, s * 0.75),
+    ), fill, glow, stroke);
+    // Cab window
+    _drawShape(canvas, Path()..addRect(
+      Rect.fromLTWH(p.dx + s * 0.12, p.dy - s * 0.78, s * 0.7, s * 0.42),
+    ), fill, glow, stroke);
+    // Wheels
+    for (final c in [
+      Offset(p.dx + s * 0.25, p.dy + s * 0.12),
+      Offset(p.dx + s * 1.55, p.dy + s * 0.12),
+      Offset(p.dx + s * 2.40, p.dy + s * 0.12),
+    ]) {
+      _drawShape(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: s * 0.20)),
+          fill, glow, stroke);
+    }
+    // Exhaust
+    _drawLine(canvas, Path()
+      ..moveTo(p.dx + s * 0.78, p.dy - s * 0.90)
+      ..lineTo(p.dx + s * 0.78, p.dy - s * 1.12),
+      glow, stroke);
+  }
+
+  void _minivan(Canvas canvas, Offset p, double s, Paint fill, Paint glow, Paint stroke) {
+    // Body
+    _drawShape(canvas, Path()..addRRect(RRect.fromRectAndCorners(
+      Rect.fromLTWH(p.dx, p.dy - s * 0.82, s * 2.2, s * 0.82),
+      topLeft: const Radius.circular(10), topRight: const Radius.circular(6),
+      bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2),
+    )), fill, glow, stroke);
+    // Windows (three)
+    for (final r in [
+      Rect.fromLTWH(p.dx + s * 0.18, p.dy - s * 0.68, s * 0.52, s * 0.38),
+      Rect.fromLTWH(p.dx + s * 0.82, p.dy - s * 0.68, s * 0.52, s * 0.38),
+      Rect.fromLTWH(p.dx + s * 1.46, p.dy - s * 0.68, s * 0.44, s * 0.38),
+    ]) {
+      _drawShape(canvas, Path()..addRect(r), fill, glow, stroke);
+    }
+    // Wheels
+    for (final c in [
+      Offset(p.dx + s * 0.38, p.dy + s * 0.11),
+      Offset(p.dx + s * 1.82, p.dy + s * 0.11),
+    ]) {
+      _drawShape(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: s * 0.19)),
+          fill, glow, stroke);
     }
   }
 
-  void _minivan(Canvas canvas, Offset p, double s, Paint glow, Paint stroke) {
-    final paths = [
-      // Body
-      Path()..addRRect(RRect.fromRectAndCorners(
-        Rect.fromLTWH(p.dx, p.dy - s * 0.82, s * 2.2, s * 0.82),
-        topLeft: const Radius.circular(10), topRight: const Radius.circular(6),
-        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2),
-      )),
-      // Windows
-      Path()
-        ..addRect(Rect.fromLTWH(p.dx + s * 0.18, p.dy - s * 0.68, s * 0.52, s * 0.38))
-        ..addRect(Rect.fromLTWH(p.dx + s * 0.82, p.dy - s * 0.68, s * 0.52, s * 0.38))
-        ..addRect(Rect.fromLTWH(p.dx + s * 1.46, p.dy - s * 0.68, s * 0.44, s * 0.38)),
-      // Wheels
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 0.38, p.dy + s * 0.11), radius: s * 0.19)),
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 1.82, p.dy + s * 0.11), radius: s * 0.19)),
-    ];
-    for (final path in paths) {
-      canvas.drawPath(path, glow);
-      canvas.drawPath(path, stroke);
+  void _auto(Canvas canvas, Offset p, double s, Paint fill, Paint glow, Paint stroke) {
+    // Canopy body
+    _drawShape(canvas, Path()..addRRect(RRect.fromRectAndCorners(
+      Rect.fromLTWH(p.dx, p.dy - s * 0.68, s * 1.5, s * 0.68),
+      topLeft: const Radius.circular(12), topRight: const Radius.circular(5),
+      bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2),
+    )), fill, glow, stroke);
+    // Window
+    _drawShape(canvas, Path()..addRect(
+      Rect.fromLTWH(p.dx + s * 0.2, p.dy - s * 0.55, s * 0.6, s * 0.28),
+    ), fill, glow, stroke);
+    // Wheels (front + dual rear)
+    for (final c in [
+      Offset(p.dx + s * 0.22, p.dy + s * 0.13),
+      Offset(p.dx + s * 1.15, p.dy + s * 0.13),
+      Offset(p.dx + s * 1.38, p.dy + s * 0.13),
+    ]) {
+      _drawShape(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: s * 0.16)),
+          fill, glow, stroke);
     }
   }
 
-  void _auto(Canvas canvas, Offset p, double s, Paint glow, Paint stroke) {
-    // Smaller, 3-wheeled, canopy top
-    final paths = [
-      // Body
-      Path()..addRRect(RRect.fromRectAndCorners(
-        Rect.fromLTWH(p.dx, p.dy - s * 0.68, s * 1.5, s * 0.68),
-        topLeft: const Radius.circular(12), topRight: const Radius.circular(5),
-        bottomLeft: const Radius.circular(2), bottomRight: const Radius.circular(2),
-      )),
-      // Front wheel
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 0.22, p.dy + s * 0.13), radius: s * 0.16)),
-      // Rear wheels (dual)
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 1.15, p.dy + s * 0.13), radius: s * 0.16)),
-      Path()..addOval(Rect.fromCircle(center: Offset(p.dx + s * 1.38, p.dy + s * 0.13), radius: s * 0.16)),
-      // Canopy stripe
-      Path()
-        ..moveTo(p.dx + s * 0.05, p.dy - s * 0.68)
-        ..lineTo(p.dx + s * 1.45, p.dy - s * 0.68),
-      // Window opening
-      Path()..addRect(Rect.fromLTWH(p.dx + s * 0.2, p.dy - s * 0.55, s * 0.6, s * 0.28)),
-    ];
-    for (final path in paths) {
-      canvas.drawPath(path, glow);
-      canvas.drawPath(path, stroke);
+  /// Motorbike with rider (replaces bicycle).
+  void _bike(Canvas canvas, Offset p, double s, Paint fill, Paint glow, Paint stroke) {
+    // Key anchors
+    final fw  = Offset(p.dx + s * 0.28, p.dy + s * 0.04);  // front wheel
+    final rw  = Offset(p.dx + s * 1.28, p.dy + s * 0.04);  // rear wheel
+    const wr  = 0.28;  // wheel radius multiplier
+
+    // ── Wheels ──
+    for (final c in [fw, rw]) {
+      _drawShape(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: s * wr)),
+          fill, glow, stroke);
+      // Hub detail
+      _drawLine(canvas, Path()..addOval(Rect.fromCircle(center: c, radius: s * 0.08)),
+          glow, stroke);
     }
+
+    // ── Fuel tank / body ──
+    _drawShape(canvas, Path()..addRRect(RRect.fromRectAndCorners(
+      Rect.fromLTWH(p.dx + s * 0.36, p.dy - s * 0.70, s * 0.68, s * 0.34),
+      topLeft: Radius.circular(s * 0.14), topRight: Radius.circular(s * 0.10),
+      bottomLeft: Radius.circular(s * 0.04), bottomRight: Radius.circular(s * 0.04),
+    )), fill, glow, stroke);
+
+    // ── Engine block ──
+    _drawShape(canvas, Path()..addRRect(RRect.fromRectAndCorners(
+      Rect.fromLTWH(p.dx + s * 0.42, p.dy - s * 0.40, s * 0.80, s * 0.44),
+      topLeft: Radius.circular(s * 0.06), topRight: Radius.circular(s * 0.06),
+      bottomLeft: Radius.circular(s * 0.04), bottomRight: Radius.circular(s * 0.04),
+    )), fill, glow, stroke);
+
+    // ── Front fork ──
+    _drawLine(canvas, Path()
+      ..moveTo(p.dx + s * 0.44, p.dy - s * 0.40)
+      ..lineTo(fw.dx + s * 0.06, fw.dy - s * wr * 0.15),
+      glow, stroke);
+
+    // ── Handlebars ──
+    _drawLine(canvas, Path()
+      ..moveTo(p.dx + s * 0.20, p.dy - s * 0.60)
+      ..lineTo(p.dx + s * 0.44, p.dy - s * 0.40)
+      ..moveTo(p.dx + s * 0.20, p.dy - s * 0.60)
+      ..lineTo(p.dx + s * 0.20, p.dy - s * 0.42),
+      glow, stroke);
+
+    // ── Rear frame ──
+    _drawLine(canvas, Path()
+      ..moveTo(p.dx + s * 1.05, p.dy - s * 0.36)
+      ..lineTo(rw.dx, rw.dy - s * wr * 0.15)
+      ..moveTo(p.dx + s * 1.05, p.dy - s * 0.36)
+      ..lineTo(p.dx + s * 0.80, p.dy - s * 0.05),
+      glow, stroke);
+
+    // ── Exhaust pipe ──
+    _drawLine(canvas, Path()
+      ..moveTo(rw.dx - s * 0.08, p.dy - s * 0.06)
+      ..lineTo(rw.dx + s * 0.20, p.dy + s * 0.18)
+      ..lineTo(rw.dx + s * 0.36, p.dy + s * 0.18),
+      glow, stroke);
+
+    // ── Seat ──
+    _drawLine(canvas, Path()
+      ..moveTo(p.dx + s * 0.72, p.dy - s * 0.58)
+      ..lineTo(p.dx + s * 1.20, p.dy - s * 0.52),
+      glow, stroke);
+
+    // ── Rider: helmet ──
+    final helmetC = Offset(p.dx + s * 0.78, p.dy - s * 1.02);
+    _drawShape(canvas,
+      Path()..addOval(Rect.fromCircle(center: helmetC, radius: s * 0.22)),
+      fill, glow, stroke);
+    // Visor slit
+    _drawLine(canvas, Path()
+      ..moveTo(helmetC.dx - s * 0.13, helmetC.dy + s * 0.04)
+      ..lineTo(helmetC.dx + s * 0.16, helmetC.dy + s * 0.04),
+      glow, stroke);
+
+    // ── Rider: torso (leaning forward) ──
+    _drawLine(canvas, Path()
+      ..moveTo(helmetC.dx, helmetC.dy + s * 0.22)
+      ..lineTo(p.dx + s * 0.96, p.dy - s * 0.52),
+      glow, stroke);
+
+    // ── Rider: arms to handlebars ──
+    _drawLine(canvas, Path()
+      ..moveTo(helmetC.dx - s * 0.06, helmetC.dy + s * 0.30)
+      ..lineTo(p.dx + s * 0.20, p.dy - s * 0.50),
+      glow, stroke);
+
+    // ── Rider: legs (bent, foot on peg) ──
+    _drawLine(canvas, Path()
+      ..moveTo(p.dx + s * 0.96, p.dy - s * 0.52)
+      ..lineTo(p.dx + s * 1.20, p.dy - s * 0.08)
+      ..lineTo(p.dx + s * 1.40, p.dy - s * 0.08),
+      glow, stroke);
   }
 
-  void _bike(Canvas canvas, Offset p, double s, Paint glow, Paint stroke) {
-    // Two wheels + diamond frame
-    final fw = Offset(p.dx + s * 0.25, p.dy + s * 0.02);
-    final rw = Offset(p.dx + s * 1.10, p.dy + s * 0.02);
-    final seat = Offset(p.dx + s * 0.65, p.dy - s * 0.55);
-
-    final paths = [
-      Path()..addOval(Rect.fromCircle(center: fw, radius: s * 0.26)),
-      Path()..addOval(Rect.fromCircle(center: rw, radius: s * 0.26)),
-      // Frame
-      Path()
-        ..moveTo(fw.dx, fw.dy - s * 0.04)
-        ..lineTo(seat.dx, seat.dy)
-        ..lineTo(rw.dx, rw.dy - s * 0.04)
-        ..moveTo(seat.dx, seat.dy)
-        ..lineTo(fw.dx + s * 0.1, fw.dy - s * 0.06),
-      // Handlebar
-      Path()
-        ..moveTo(seat.dx - s * 0.1, seat.dy)
-        ..lineTo(p.dx + s * 0.38, p.dy - s * 0.68),
-      // Seat
-      Path()
-        ..moveTo(seat.dx - s * 0.05, seat.dy - s * 0.02)
-        ..lineTo(seat.dx + s * 0.32, seat.dy - s * 0.02),
-    ];
-    for (final path in paths) {
-      canvas.drawPath(path, glow);
-      canvas.drawPath(path, stroke);
-    }
-  }
-
-  // ── Vignette ───────────────────────────────────────────────────────────────
   void _drawVignette(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
+    final bgColor = isDark ? AppColors.obsidian : const Color(0xFFF0F6FF);
 
-    // Left fade
     canvas.drawRect(
       Rect.fromLTWH(0, 0, w * 0.12, h),
       Paint()..shader = LinearGradient(
-        colors: [AppColors.obsidian, Colors.transparent],
+        colors: [bgColor, Colors.transparent],
       ).createShader(Rect.fromLTWH(0, 0, w * 0.12, h)),
     );
-
-    // Right fade
     canvas.drawRect(
       Rect.fromLTWH(w * 0.88, 0, w * 0.12, h),
       Paint()..shader = LinearGradient(
-        colors: [Colors.transparent, AppColors.obsidian],
+        colors: [Colors.transparent, bgColor],
       ).createShader(Rect.fromLTWH(w * 0.88, 0, w * 0.12, h)),
     );
-
-    // Bottom blend into CTA
     canvas.drawRect(
       Rect.fromLTWH(0, h * 0.78, w, h * 0.22),
       Paint()..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Colors.transparent, AppColors.obsidian],
+        colors: [Colors.transparent, bgColor],
       ).createShader(Rect.fromLTWH(0, h * 0.78, w, h * 0.22)),
     );
   }
 
   @override
   bool shouldRepaint(covariant _ScenePainter old) =>
-      old.loop != loop || old.accel != accel;
+      old.loop != loop || old.accel != accel || old.isDark != isDark;
 }

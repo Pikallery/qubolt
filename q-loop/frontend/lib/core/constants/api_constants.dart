@@ -42,7 +42,8 @@ class ApiConstants {
   static const String analyticsByPlatform    = '/analytics/by-platform';
   static const String analyticsByMode        = '/analytics/by-delivery-mode';
   static const String analyticsByPriority    = '/analytics/by-priority';
-  static const String analyticsSustainability = '/analytics/sustainability';
+  static const String analyticsSustainability    = '/analytics/sustainability';
+  static const String analyticsBehavioralEntropy = '/analytics/behavioral-entropy';
 
   // Route optimizer
   static String routeOptimizeSync(String id) => '/routes/$id/optimize-sync';

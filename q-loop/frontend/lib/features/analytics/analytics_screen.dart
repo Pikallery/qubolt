@@ -33,6 +33,13 @@ final _modeProvider = FutureProvider<List<dynamic>>((ref) async {
   return res.data as List<dynamic>;
 });
 
+final _behavioralEntropyProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  final dio = ref.read(dioProvider);
+  final res = await dio.get(ApiConstants.analyticsBehavioralEntropy);
+  return res.data as Map<String, dynamic>;
+});
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -57,6 +64,9 @@ class AnalyticsScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Row 0: Wave-Function / Behavioral Entropy
+                        _WaveFunctionChart(ref: ref),
+                        const SizedBox(height: 24),
                         // Row 1: by-vehicle + by-mode
                         LayoutBuilder(builder: (ctx, c) {
                           if (c.maxWidth > 700) {
@@ -517,4 +527,349 @@ class _Cell extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(text, style: TextStyle(fontSize: 12, color: color)),
       );
+}
+
+// ── Wave-Function / Behavioral Entropy Chart ──────────────────────────────────
+
+class _WaveFunctionChart extends StatefulWidget {
+  const _WaveFunctionChart({required this.ref});
+  final WidgetRef ref;
+
+  @override
+  State<_WaveFunctionChart> createState() => _WaveFunctionChartState();
+}
+
+class _WaveFunctionChartState extends State<_WaveFunctionChart>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmer;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _shimmer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.ref.watch(_behavioralEntropyProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.divider(context)),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: AppColors.quantumAccent.withValues(alpha: 0.06),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(children: [
+            AnimatedBuilder(
+              animation: _shimmer,
+              builder: (_, child) => ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: [
+                    AppColors.quantumAccent,
+                    const Color(0xFF7000FF),
+                    AppColors.quantumAccent,
+                  ],
+                  stops: [
+                    (_shimmer.value - 0.3).clamp(0.0, 1.0),
+                    _shimmer.value.clamp(0.0, 1.0),
+                    (_shimmer.value + 0.3).clamp(0.0, 1.0),
+                  ],
+                ).createShader(bounds),
+                child: child!,
+              ),
+              child: Text(
+                'Wave-Function  ·  Behavioral Entropy',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.quantumAccent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: AppColors.quantumAccent.withValues(alpha: 0.35)),
+              ),
+              child: const Text('OBSERVER EFFECT',
+                  style: TextStyle(
+                      color: AppColors.quantumAccent,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2)),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          Text(
+            'ETA accuracy: Quantum Optimization (predicted) vs fleet baseline (actual)',
+            style: TextStyle(
+                color: AppColors.labelText(context),
+                fontSize: 11),
+          ),
+          const SizedBox(height: 16),
+
+          data.when(
+            loading: () => const SizedBox(
+              height: 200,
+              child: Center(
+                  child: CircularProgressIndicator(
+                      color: AppColors.quantumAccent)),
+            ),
+            error: (e, _) => SizedBox(
+              height: 200,
+              child: Center(
+                  child: Text('$e',
+                      style: const TextStyle(
+                          color: AppColors.error, fontSize: 12))),
+            ),
+            data: (d) {
+              final predicted =
+                  (d['predicted'] as List).map((v) => (v as num).toDouble()).toList();
+              final actual =
+                  (d['actual'] as List).map((v) => (v as num).toDouble()).toList();
+              final entropy = (d['entropy_score'] as num).toDouble();
+              final interpretation = d['interpretation'] as String? ?? '';
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 200,
+                    child: LineChart(
+                      LineChartData(
+                        minY: 0,
+                        maxY: 110,
+                        clipData: const FlClipData.all(),
+                        gridData: FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: 25,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: AppColors.divider(context)
+                                .withValues(alpha: 0.4),
+                            strokeWidth: 0.5,
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 32,
+                              interval: 25,
+                              getTitlesWidget: (v, _) => Text(
+                                '${v.toInt()}%',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: AppColors.labelText(context)),
+                              ),
+                            ),
+                          ),
+                          bottomTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                        ),
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (spots) => spots.map((s) {
+                              final label =
+                                  s.barIndex == 0 ? 'Quantum' : 'Baseline';
+                              return LineTooltipItem(
+                                '$label\n${s.y.toStringAsFixed(1)}%',
+                                TextStyle(
+                                  color: s.barIndex == 0
+                                      ? AppColors.quantumAccent
+                                      : AppColors.accent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        lineBarsData: [
+                          // Predicted (quantum) — neon teal with glow gradient
+                          LineChartBarData(
+                            spots: List.generate(
+                              predicted.length,
+                              (i) => FlSpot(i.toDouble(), predicted[i]),
+                            ),
+                            isCurved: true,
+                            curveSmoothness: 0.35,
+                            color: AppColors.quantumAccent,
+                            barWidth: 2.5,
+                            isStrokeCapRound: true,
+                            dotData: const FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppColors.quantumAccent
+                                      .withValues(alpha: isDark ? 0.22 : 0.15),
+                                  AppColors.quantumAccent
+                                      .withValues(alpha: 0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Actual (baseline) — electric blue
+                          LineChartBarData(
+                            spots: List.generate(
+                              actual.length,
+                              (i) => FlSpot(i.toDouble(), actual[i]),
+                            ),
+                            isCurved: true,
+                            curveSmoothness: 0.35,
+                            color: AppColors.accent,
+                            barWidth: 1.8,
+                            isStrokeCapRound: true,
+                            dotData: const FlDotData(show: false),
+                            dashArray: [6, 4],
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppColors.accent
+                                      .withValues(alpha: isDark ? 0.10 : 0.07),
+                                  AppColors.accent.withValues(alpha: 0.0),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Legend + entropy score
+                  Row(children: [
+                    _WaveLegendDot(
+                        color: AppColors.quantumAccent, label: 'Quantum (predicted)'),
+                    const SizedBox(width: 16),
+                    _WaveLegendDot(
+                        color: AppColors.accent, label: 'Baseline (actual)', dashed: true),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _entropyColor(entropy)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: _entropyColor(entropy)
+                                .withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        'Entropy: ${entropy.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          color: _entropyColor(entropy),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(
+                    interpretation,
+                    style: TextStyle(
+                        color: AppColors.labelText(context), fontSize: 11),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _entropyColor(double e) {
+    if (e < 10) return AppColors.success;
+    if (e > 25) return AppColors.quantumAccent;
+    return AppColors.warning;
+  }
+}
+
+class _WaveLegendDot extends StatelessWidget {
+  const _WaveLegendDot(
+      {required this.color, required this.label, this.dashed = false});
+  final Color color;
+  final String label;
+  final bool dashed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(
+        width: 24,
+        height: 2,
+        child: dashed
+            ? CustomPaint(painter: _DashPainter(color: color))
+            : DecoratedBox(decoration: BoxDecoration(color: color)),
+      ),
+      const SizedBox(width: 6),
+      Text(label,
+          style: TextStyle(
+              fontSize: 11, color: AppColors.labelText(context))),
+    ]);
+  }
+}
+
+class _DashPainter extends CustomPainter {
+  const _DashPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(Offset(x, size.height / 2),
+          Offset((x + 4).clamp(0, size.width), size.height / 2), paint);
+      x += 7;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashPainter old) => old.color != color;
 }
