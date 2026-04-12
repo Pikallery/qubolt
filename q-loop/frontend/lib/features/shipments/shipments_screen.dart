@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
+import '../auth/domain/auth_provider.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -334,6 +335,28 @@ class _ShipmentRow extends ConsumerWidget {
               style: const TextStyle(fontSize: 12),
             ),
           ),
+          // Assign Driver button (manager/admin only)
+          if (status == 'pending' && shipmentId.isNotEmpty) Builder(
+            builder: (ctx) {
+              final role = ref.read(authNotifierProvider).role ?? '';
+              if (role != 'manager' && role != 'admin' && role != 'superadmin') {
+                return const SizedBox.shrink();
+              }
+              return InkWell(
+                onTap: () => _AssignDriverDialog.show(ctx, ref, shipmentId),
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Tooltip(
+                    message: 'Assign Driver',
+                    child: Icon(Icons.person_add_outlined,
+                        size: 16, color: AppColors.primary.withValues(alpha: 0.85)),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (status == 'pending' && shipmentId.isNotEmpty) const SizedBox(width: 4),
           // AI ETA button
           if (status != 'delivered' && shipmentId.isNotEmpty)
             InkWell(
@@ -767,5 +790,149 @@ class _PhotoTileState extends State<_PhotoTile> {
       );
     }
     return Image.memory(_bytes!, fit: BoxFit.cover);
+  }
+}
+
+// ── Assign Driver Dialog ──────────────────────────────────────────────────────
+
+class _AssignDriverDialog extends StatefulWidget {
+  const _AssignDriverDialog({required this.shipmentId});
+  final String shipmentId;
+
+  static void show(BuildContext context, WidgetRef ref, String shipmentId) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => ProviderScope(
+        parent: ProviderScope.containerOf(context),
+        child: _AssignDriverDialog(shipmentId: shipmentId),
+      ),
+    );
+  }
+
+  @override
+  State<_AssignDriverDialog> createState() => _AssignDriverDialogState();
+}
+
+class _AssignDriverDialogState extends State<_AssignDriverDialog> {
+  List<Map<String, dynamic>> _drivers = [];
+  bool _loading = true;
+  String? _selectedDriverId;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDrivers();
+  }
+
+  Future<void> _fetchDrivers() async {
+    try {
+      // Access dio via a consumer - use direct access from ProviderScope
+      final container = ProviderScope.containerOf(context);
+      final dio = container.read(dioProvider);
+      final res = await dio.get(ApiConstants.userDrivers);
+      final list = List<Map<String, dynamic>>.from(res.data as List? ?? []);
+      if (mounted) setState(() { _drivers = list; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _assign() async {
+    if (_selectedDriverId == null) return;
+    setState(() => _submitting = true);
+    try {
+      final container = ProviderScope.containerOf(context);
+      final dio = container.read(dioProvider);
+      await dio.post(
+        ApiConstants.shipmentAssignDriver(widget.shipmentId),
+        data: {'driver_id': _selectedDriverId},
+      );
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Driver assigned and notified'),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to assign: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.cardBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      title: const Row(children: [
+        Icon(Icons.person_add_outlined, color: AppColors.primary, size: 18),
+        SizedBox(width: 8),
+        Text('Assign Driver', style: TextStyle(fontSize: 15)),
+      ]),
+      content: SizedBox(
+        width: 340,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : _drivers.isEmpty
+                ? const Text('No active drivers found.',
+                    style: TextStyle(color: AppColors.textSecondary))
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Select a driver to assign to this shipment:',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _selectedDriverId,
+                        dropdownColor: AppColors.cardBg,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                        hint: const Text('Choose driver', style: TextStyle(fontSize: 13)),
+                        items: _drivers.map((d) {
+                          final name = d['full_name'] as String? ?? d['email'] as String? ?? '—';
+                          final id = d['id'] as String;
+                          return DropdownMenuItem<String>(
+                            value: id,
+                            child: Text(name, style: const TextStyle(fontSize: 13)),
+                          );
+                        }).toList(),
+                        onChanged: (v) => setState(() => _selectedDriverId = v),
+                      ),
+                    ],
+                  ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: (_selectedDriverId == null || _submitting) ? null : _assign,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: _submitting
+              ? const SizedBox(width: 14, height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+              : const Text('Assign', style: TextStyle(fontWeight: FontWeight.w600)),
+        ),
+      ],
+    );
   }
 }

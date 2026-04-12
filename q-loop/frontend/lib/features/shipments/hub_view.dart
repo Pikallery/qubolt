@@ -847,8 +847,10 @@ class _ShipmentsTabState extends ConsumerState<_ShipmentsTab> {
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: _shipments.length,
-                            itemBuilder: (_, i) =>
-                                _HubShipmentCard(shipment: _shipments[i]),
+                            itemBuilder: (_, i) => _HubShipmentCard(
+                              shipment: _shipments[i],
+                              onConfirmed: _load,
+                            ),
                           ),
                         ),
         ),
@@ -857,14 +859,49 @@ class _ShipmentsTabState extends ConsumerState<_ShipmentsTab> {
   }
 }
 
-class _HubShipmentCard extends StatelessWidget {
-  const _HubShipmentCard({required this.shipment});
+class _HubShipmentCard extends ConsumerStatefulWidget {
+  const _HubShipmentCard({required this.shipment, this.onConfirmed});
   final Map<String, dynamic> shipment;
+  final VoidCallback? onConfirmed;
+
+  @override
+  ConsumerState<_HubShipmentCard> createState() => _HubShipmentCardState();
+}
+
+class _HubShipmentCardState extends ConsumerState<_HubShipmentCard> {
+  bool _confirming = false;
+
+  Future<void> _confirmArrival() async {
+    final id = widget.shipment['id'] as String? ?? '';
+    if (id.isEmpty) return;
+    setState(() => _confirming = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.patch('/shipments/$id', data: {'status': 'delivered'});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Arrival confirmed — manager notified'),
+          backgroundColor: AppColors.success,
+        ));
+        widget.onConfirmed?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final status = shipment['status'] ?? 'pending';
+    final status = widget.shipment['status'] ?? 'pending';
     final color = AppColors.statusColor(status);
+    final isInTransit = status == 'in_transit';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -872,50 +909,77 @@ class _HubShipmentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.inventory_2_outlined, color: color, size: 18),
+        border: Border.all(
+          color: isInTransit ? AppColors.warning.withValues(alpha: 0.5) : AppColors.border,
+          width: isInTransit ? 1.5 : 1,
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-              shipment['external_id'] ??
-                  (shipment['id']?.toString().substring(0, 8) ?? '—'),
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.inventory_2_outlined, color: color, size: 18),
             ),
-            const SizedBox(height: 3),
-            Text(
-              '${shipment['region'] ?? 'Unknown'} · ${shipment['package_type'] ?? 'General'}',
-              style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                  widget.shipment['external_id'] ??
+                      (widget.shipment['id']?.toString().substring(0, 8) ?? '—'),
+                  style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${widget.shipment['region'] ?? 'Unknown'} · ${widget.shipment['package_type'] ?? 'General'}',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                ),
+              ]),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Text(status.toUpperCase(),
+                  style: TextStyle(
+                      color: color, fontSize: 9, fontWeight: FontWeight.w700)),
             ),
           ]),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Text(status.toUpperCase(),
-              style: TextStyle(
-                  color: color, fontSize: 9, fontWeight: FontWeight.w700)),
-        ),
-      ]),
+          if (isInTransit) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 34,
+              child: ElevatedButton.icon(
+                onPressed: _confirming ? null : _confirmArrival,
+                icon: _confirming
+                    ? const SizedBox(width: 12, height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Icon(Icons.check_circle_outline, size: 15),
+                label: Text(_confirming ? 'Confirming…' : 'Confirm Arrival'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

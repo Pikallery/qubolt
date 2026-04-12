@@ -21,6 +21,8 @@ class ApiConstants {
 
   // Users
   static String userById(String id) => '/users/$id';
+  static const String userDrivers = '/users/drivers';
+  static String shipmentAssignDriver(String id) => '/shipments/$id/assign-driver';
 
   // Shipments
   static const String shipments     = '/shipments';

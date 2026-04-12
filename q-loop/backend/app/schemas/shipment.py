@@ -32,6 +32,9 @@ class ShipmentRead(BaseModel):
     external_id: str | None
     customer_id: uuid.UUID | None
     partner_id: uuid.UUID | None
+    assigned_driver_id: uuid.UUID | None = None
+    hub_operator_id: uuid.UUID | None = None
+    employment_type: str = "company"
     package_type: str | None
     vehicle_type: str | None
     delivery_mode: str | None
@@ -56,6 +59,9 @@ class ShipmentUpdate(BaseModel):
     delivered_at: datetime | None = None
     rating: int | None = Field(None, ge=1, le=5)
     refund_requested: bool | None = None
+    assigned_driver_id: uuid.UUID | None = None
+    hub_operator_id: uuid.UUID | None = None
+    employment_type: str | None = None
 
 
 class ShipmentEventCreate(BaseModel):

@@ -370,8 +370,11 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
     setState(() => _loading = true);
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('/shipments',
-          queryParameters: {'status': 'pending', 'page_size': 50});
+      final userId = ref.read(authNotifierProvider).userId;
+      final res = await dio.get(ApiConstants.shipments, queryParameters: {
+        'page_size': 50,
+        if (userId != null) 'assigned_driver_id': userId,
+      });
       setState(() {
         _shipments = List<Map<String, dynamic>>.from(res.data['items'] ?? []);
         _loading = false;
@@ -499,7 +502,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
   Future<void> _markDelivered(String id) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.patch('/shipments/$id', data: {'status': 'delivered'});
+      await dio.patch(ApiConstants.shipment(id), data: {'status': 'in_transit'});
       // Add to session earnings so the Earnings tab updates live
       final shipment = _shipments.firstWhere(
         (s) => s['id'] == id,
@@ -524,7 +527,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
   Future<void> _acceptOrder(String id) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.patch('/api/v1/shipments/$id', data: {'status': 'in_transit'});
+      await dio.patch(ApiConstants.shipment(id), data: {'status': 'in_transit'});
       setState(() => _acceptedOrders.add(id));
     } catch (e) {
       if (mounted) {
@@ -538,7 +541,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
   Future<void> _cancelOrder(String id) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.patch('/api/v1/shipments/$id', data: {'status': 'pending'});
+      await dio.patch(ApiConstants.shipment(id), data: {'status': 'pending'});
       setState(() => _acceptedOrders.remove(id));
       _load();
     } catch (e) {

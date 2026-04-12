@@ -51,6 +51,21 @@ async def get_user(user_id: uuid.UUID, tenant: CurrentTenant, db: DBSession):
     return UserRead.model_validate(user)
 
 
+@router.get("/drivers", response_model=list[UserRead])
+async def list_drivers(
+    tenant: CurrentTenant,
+    db: DBSession,
+    _: CurrentUser,
+):
+    """Return all active drivers for this tenant (used by manager assign-driver flow)."""
+    result = await db.execute(
+        select(User)
+        .where(User.tenant_id == tenant.id, User.role == "driver", User.is_active == True)
+        .order_by(User.full_name)
+    )
+    return [UserRead.model_validate(u) for u in result.scalars().all()]
+
+
 @router.patch("/{user_id}", response_model=UserRead, dependencies=[require_min_role("admin")])
 async def update_user(user_id: uuid.UUID, body: UserUpdate, tenant: CurrentTenant, db: DBSession):
     result = await db.execute(

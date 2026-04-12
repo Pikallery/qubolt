@@ -26,6 +26,13 @@ class Shipment(Base, UUIDPKMixin, TimestampMixin):
     partner_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("delivery_partners.id", ondelete="SET NULL")
     )
+    assigned_driver_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    hub_operator_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    employment_type: Mapped[str] = mapped_column(String(20), nullable=False, server_default="company")
     origin_address_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("customer_addresses.id", ondelete="SET NULL")
     )
