@@ -20,6 +20,7 @@ import 'features/shipments/shipments_screen.dart';
 import 'features/users/users_screen.dart';
 import 'features/drivers/driver_analytics_screen.dart';
 import 'features/geofence/geofence_screen.dart';
+import 'features/map/map_screen.dart';
 import 'features/returns/returns_screen.dart';
 import 'features/partners/partners_screen.dart';
 
@@ -62,6 +63,7 @@ GoRouter createRouter(Ref ref) => GoRouter(
         GoRoute(path: '/returns', builder: (_, __) => const ReturnsScreen()),
         GoRoute(path: '/partners', builder: (_, __) => const PartnersScreen()),
         GoRoute(path: '/geofence', builder: (_, __) => const GeofenceScreen()),
+        GoRoute(path: '/map', builder: (_, __) => const MapScreen()),
       ],
     );
 

@@ -5,8 +5,14 @@ class AppColors {
   AppColors._();
 
   // ── Brand / Accent (theme-independent) ────────────────────────────────────
-  static const Color primary    = Color(0xFF00D4AA);   // teal-green brand
-  static const Color primaryDim = Color(0xFF00A882);
+  static const Color primary    = Color(0xFF00E5B0);   // teal-green brand
+  static const Color primaryDim = Color(0xFF00B88A);
+
+  // ── Quantum-AI Brand ──────────────────────────────────────────────────────────
+  static const Color quantumAccent = Color(0xFF00E5B0);
+  static const Color quantumGlow   = Color(0x8000E5B0);
+  static const Color quantumPurple = Color(0xFF7000FF);
+  static const Color obsidian      = Color(0xFF0D1117);
   static const Color accent     = Color(0xFF3B82F6);   // electric blue
   static const Color accentDim  = Color(0xFF1D4ED8);
 
