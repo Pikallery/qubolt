@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
@@ -38,9 +39,11 @@ class UsersScreen extends ConsumerWidget {
                     loading: () => const Center(
                         child: CircularProgressIndicator(
                             color: AppColors.primary)),
-                    error: (e, _) => const _UserList(users: _kDemoUsers),
-                    data: (list) =>
-                        _UserList(users: list.isEmpty ? _kDemoUsers : list),
+                    error: (e, _) => _UserList(
+                        users: _kDemoUsers, onRefresh: () => ref.invalidate(_usersProvider)),
+                    data: (list) => _UserList(
+                        users: list.isEmpty ? _kDemoUsers : list,
+                        onRefresh: () => ref.invalidate(_usersProvider)),
                   ),
                 ),
               ],
@@ -95,8 +98,9 @@ class _TopBar extends StatelessWidget {
 }
 
 class _UserList extends StatelessWidget {
-  const _UserList({required this.users});
+  const _UserList({required this.users, required this.onRefresh});
   final List<dynamic> users;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +133,8 @@ class _UserList extends StatelessWidget {
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: users.length,
-            itemBuilder: (_, i) => _UserCard(user: users[i]),
+            itemBuilder: (_, i) =>
+                _UserCard(user: users[i], onRefresh: onRefresh),
           ),
         ),
       ],
@@ -150,9 +155,9 @@ class _RolePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text('$count $label',
           style: TextStyle(
@@ -161,9 +166,10 @@ class _RolePill extends StatelessWidget {
   }
 }
 
-class _UserCard extends StatelessWidget {
-  const _UserCard({required this.user});
+class _UserCard extends ConsumerWidget {
+  const _UserCard({required this.user, required this.onRefresh});
   final dynamic user;
+  final VoidCallback onRefresh;
 
   String get _id {
     final m = user is Map ? user as Map : <String, dynamic>{};
@@ -176,9 +182,9 @@ class _UserCard extends StatelessWidget {
       case 'gatekeeper':
         return 'HUB-751001-${(hash % 90 + 10).toString().padLeft(2, '0')}';
       case 'manager':
-        return 'MGR-QLOOP-L2-$hash';
+        return 'MGR-QUBOLT-L2-$hash';
       case 'admin':
-        return 'MGR-QLOOP-L5-$hash';
+        return 'MGR-QUBOLT-L5-$hash';
       default:
         return 'USR-$hash';
     }
@@ -200,12 +206,114 @@ class _UserCard extends StatelessWidget {
     }
   }
 
+  Future<void> _editPhone(BuildContext context, WidgetRef ref) async {
+    final m = user is Map ? user as Map : <String, dynamic>{};
+    final userId = m['id'] as String? ?? '';
+    final existing = m['phone'] as String? ?? '';
+
+    final ctrl = TextEditingController(text: existing);
+
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(children: [
+          Icon(Icons.phone_outlined, color: AppColors.primary, size: 18),
+          SizedBox(width: 8),
+          Text('Set Phone Number',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the mobile number in international format.\nExample: +919876543210',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              style: const TextStyle(color: AppColors.textPrimary),
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: '+91XXXXXXXXXX',
+                hintStyle:
+                    const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                filled: true,
+                fillColor: AppColors.scaffoldBg,
+                prefixIcon: const Icon(Icons.phone, color: AppColors.primary, size: 18),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || userId.isEmpty) return;
+
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.patch(
+        ApiConstants.userById(userId),
+        data: {'phone': result.isEmpty ? null : result},
+      );
+      onRefresh();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(result.isEmpty
+              ? 'Phone number removed'
+              : 'Phone set to $result — calls will now connect via Twilio'),
+          backgroundColor: AppColors.primary,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to update phone: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final m = user is Map ? user as Map : <String, dynamic>{};
     final email = (m['email'] as String?) ?? '—';
     final role = (m['role'] as String?) ?? 'viewer';
     final name = (m['full_name'] as String?) ?? email.split('@').first;
+    final phone = (m['phone'] as String?);
     final color = _roleColor;
 
     return Container(
@@ -219,7 +327,7 @@ class _UserCard extends StatelessWidget {
       child: Row(children: [
         CircleAvatar(
           radius: 20,
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Text(
             name.isNotEmpty ? name[0].toUpperCase() : '?',
             style: TextStyle(
@@ -239,7 +347,28 @@ class _UserCard extends StatelessWidget {
               Text(email,
                   style: const TextStyle(
                       color: AppColors.textSecondary, fontSize: 11)),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
+              // Phone row
+              Row(children: [
+                Icon(
+                  phone != null ? Icons.phone : Icons.phone_disabled_outlined,
+                  size: 11,
+                  color: phone != null ? AppColors.primary : AppColors.textMuted,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  phone ?? 'No phone — calls simulated',
+                  style: TextStyle(
+                    color: phone != null
+                        ? AppColors.textSecondary
+                        : AppColors.textMuted,
+                    fontSize: 11,
+                    fontStyle:
+                        phone == null ? FontStyle.italic : FontStyle.normal,
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 2),
               Text(_id,
                   style: const TextStyle(
                       color: AppColors.textMuted,
@@ -248,16 +377,32 @@ class _UserCard extends StatelessWidget {
             ],
           ),
         ),
+        // Role badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Text(role == 'gatekeeper' ? 'HUB OPS' : role.toUpperCase(),
               style: TextStyle(
                   color: color, fontSize: 9, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(width: 8),
+        // Phone edit button
+        Tooltip(
+          message: phone != null ? 'Edit phone number' : 'Add phone number to enable calls',
+          child: IconButton(
+            onPressed: () => _editPhone(context, ref),
+            icon: Icon(
+              phone != null ? Icons.edit_outlined : Icons.add_call,
+              size: 16,
+              color: phone != null ? AppColors.textSecondary : AppColors.primary,
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
         ),
       ]),
     );
@@ -269,7 +414,7 @@ const _kDemoUsers = [
   {
     'email': 'ravi.driver@test.com',
     'role': 'driver',
-    'full_name': 'Ravi Kumar'
+    'full_name': 'Ravi Kumar',
   },
   {'email': 'samal@gmail.com', 'role': 'driver', 'full_name': 'Sai Samal'},
   {

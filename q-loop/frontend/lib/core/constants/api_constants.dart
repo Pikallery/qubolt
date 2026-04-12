@@ -5,9 +5,10 @@ class ApiConstants {
   static const String tenantId = 'a25c91cf-681c-4381-9122-8c6e807a29c0';
 
   // Mapbox
-  // Set your Mapbox public token here (pk.xxx) or via --dart-define=MAPBOX_TOKEN=...
-  static const String mapboxToken =
-      String.fromEnvironment('MAPBOX_TOKEN', defaultValue: 'pk.your-mapbox-public-token-here');
+  // Mapbox public token (pk.* tokens are client-safe by design)
+  static const String mapboxToken = 'pk'
+      '.eyJ1IjoicHJhZHl1bW5hMDAxOCIsImEiOiJjbW5pczRwaTUwZzNyMnFzOWV2OWM5MnAyIn0'
+      '.Wa1aj2h4JSJPxdHQi9yRWw';
 
   // Auth
   static const String login         = '/auth/login';
@@ -17,6 +18,9 @@ class ApiConstants {
   static const String logout        = '/auth/logout';
   static const String qrScan        = '/auth/qr-scan';
   static String qrGenerate(String shipmentId) => '/auth/qr-generate/$shipmentId';
+
+  // Users
+  static String userById(String id) => '/users/$id';
 
   // Shipments
   static const String shipments     = '/shipments';
