@@ -16,7 +16,7 @@ class SettingsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           if (!isMobile) const DarkSidebar(),
@@ -172,25 +172,25 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
           const SizedBox(width: 8),
         ],
-        const Icon(Icons.settings_outlined, color: AppColors.primary, size: 20),
+        Icon(Icons.settings_outlined, color: AppColors.primary, size: 20),
         const SizedBox(width: 10),
-        const Text('Settings',
+        Text('Settings',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textMain(context),
                 fontWeight: FontWeight.w600,
                 fontSize: 18)),
       ]),
@@ -266,8 +266,8 @@ class _ProfileCard extends StatelessWidget {
                 role == 'gatekeeper'
                     ? 'Hub Operator'
                     : role[0].toUpperCase() + role.substring(1),
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
+                style: TextStyle(
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w700,
                     fontSize: 16),
               ),
@@ -279,8 +279,8 @@ class _ProfileCard extends StatelessWidget {
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.w600)),
               Text(auth.userId ?? 'Not logged in',
-                  style: const TextStyle(
-                      color: AppColors.textMuted,
+                  style: TextStyle(
+                      color: AppColors.labelText(context),
                       fontSize: 10,
                       fontFamily: 'monospace')),
             ],
@@ -318,9 +318,9 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Column(
         children: [
@@ -330,13 +330,13 @@ class _SectionCard extends StatelessWidget {
               Icon(icon, color: AppColors.primary, size: 16),
               const SizedBox(width: 8),
               Text(title,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
+                  style: TextStyle(
+                      color: AppColors.textMain(context),
                       fontWeight: FontWeight.w600,
                       fontSize: 13)),
             ]),
           ),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: AppColors.divider(context), height: 1),
           ...children,
         ],
       ),
@@ -378,11 +378,11 @@ class _ToggleTileState extends State<_ToggleTile> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(widget.label,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13)),
+                  style: TextStyle(
+                      color: AppColors.textMain(context), fontSize: 13)),
               Text(widget.subtitle,
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 11)),
+                  style: TextStyle(
+                      color: AppColors.labelText(context), fontSize: 11)),
             ],
           ),
         ),
@@ -412,11 +412,11 @@ class _InfoTile extends StatelessWidget {
       child: Row(children: [
         Text(label,
             style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                TextStyle(color: AppColors.textSub(context), fontSize: 13)),
         const Spacer(),
         Text(value,
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textMain(context),
                 fontSize: 12,
                 fontFamily: mono ? 'monospace' : null,
                 fontWeight: FontWeight.w500)),

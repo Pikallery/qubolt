@@ -269,7 +269,7 @@ class _PartnersScreenState extends ConsumerState<PartnersScreen> {
                       children: regions
                           .map((r) => Chip(
                                 label: Text(r,
-                                    style: const TextStyle(fontSize: 11)),
+                                    style: TextStyle(fontSize: 11)),
                                 backgroundColor:
                                     AppColors.success.withOpacity(0.12),
                               ))
@@ -306,7 +306,7 @@ class _TopBar extends StatelessWidget {
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -379,7 +379,7 @@ class _PartnerCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text(name,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 14)),
                   if (phone.isNotEmpty)
                     Text(phone,
@@ -422,7 +422,7 @@ class _PartnerCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(v.replaceAll('_', ' '),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 10,
                                   color: AppColors.accent,
                                   fontWeight: FontWeight.w600)),
@@ -451,11 +451,11 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.handshake_outlined,
+          Icon(Icons.handshake_outlined,
               size: 48, color: AppColors.textSecondary),
           const SizedBox(height: 12),
-          const Text('No delivery partners',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+          Text('No delivery partners',
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 15)),
           const SizedBox(height: 6),
           Text('Click "Add Partner" to register your first delivery partner.',
               style:

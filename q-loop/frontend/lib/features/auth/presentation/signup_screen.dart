@@ -170,7 +170,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
@@ -291,9 +291,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                   // ── Sign in link ───────────────────────────────────────────
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Text('Already have an account? ',
+                    Text('Already have an account? ',
                         style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 13)),
+                            color: AppColors.textSub(context), fontSize: 13)),
                     GestureDetector(
                       onTap: () => context.go('/login'),
                       child: const Text('Sign In',
@@ -321,24 +321,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           height: 36,
           decoration: BoxDecoration(
               color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.loop, color: Colors.black, size: 20),
+          child: Icon(Icons.loop, color: Colors.black, size: 20),
         ),
         const SizedBox(width: 10),
-        const Text('Qubolt',
+        Text('Qubolt',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textMain(context),
                 fontWeight: FontWeight.w700,
                 fontSize: 20)),
       ]),
       const SizedBox(height: 8),
-      const Text('Create your account',
+      Text('Create your account',
           style: TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.textMain(context),
               fontWeight: FontWeight.w600,
               fontSize: 22)),
       const SizedBox(height: 4),
-      const Text('Join the supply chain network',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+      Text('Join the supply chain network',
+          style: TextStyle(color: AppColors.textSub(context), fontSize: 13)),
     ]);
   }
 }
@@ -359,9 +359,9 @@ class _RoleToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('I am a…',
+      Text('I am a…',
           style: TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.textSub(context),
               fontSize: 12,
               fontWeight: FontWeight.w500)),
       const SizedBox(height: 8),
@@ -425,9 +425,9 @@ class _PhoneOtpRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Phone Number',
+      Text('Phone Number',
           style: TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.textSub(context),
               fontSize: 12,
               fontWeight: FontWeight.w500)),
       const SizedBox(height: 6),
@@ -592,7 +592,7 @@ class _RoleFields extends StatelessWidget {
 
 InputDecoration _inputDecoration(String hint) => InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textMuted),
+      hintStyle: TextStyle(color: AppColors.textMuted),
       filled: true,
       fillColor: AppColors.cardBg,
       border: OutlineInputBorder(
@@ -633,8 +633,8 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
-          style: const TextStyle(
-              color: AppColors.textSecondary,
+          style: TextStyle(
+              color: AppColors.textSub(context),
               fontSize: 12,
               fontWeight: FontWeight.w500)),
       const SizedBox(height: 6),
@@ -670,8 +670,8 @@ class _DropdownField<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
-          style: const TextStyle(
-              color: AppColors.textSecondary,
+          style: TextStyle(
+              color: AppColors.textSub(context),
               fontSize: 12,
               fontWeight: FontWeight.w500)),
       const SizedBox(height: 6),
@@ -681,7 +681,7 @@ class _DropdownField<T> extends StatelessWidget {
         onChanged: onChanged,
         validator: validator,
         dropdownColor: AppColors.cardBg,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+        style: TextStyle(color: AppColors.textMain(context), fontSize: 13),
         decoration: _inputDecoration(hint),
       ),
     ]);

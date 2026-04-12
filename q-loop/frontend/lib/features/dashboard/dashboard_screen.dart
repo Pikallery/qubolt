@@ -30,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           // ── Dark Sidebar (desktop only) ──────────────────────────────────
@@ -153,7 +153,7 @@ class DashboardScreen extends ConsumerWidget {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: AppColors.cardBg.withOpacity(0.92),
+                                      color: AppColors.surface(context).withOpacity(0.92),
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                           color: AppColors.primary
@@ -221,25 +221,25 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(
         children: [
           if (isMobile) ...[
-            const Icon(Icons.loop, color: AppColors.primary, size: 22),
+            Icon(Icons.loop, color: AppColors.primary, size: 22),
             const SizedBox(width: 8),
-            const Text('Qubolt',
+            Text('Qubolt',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w700,
                     fontSize: 16)),
             const Spacer(),
           ] else ...[
-            const Text('Dashboard',
+            Text('Dashboard',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 18)),
             const Spacer(),
@@ -385,7 +385,7 @@ class _MetricCardsSkeleton extends StatelessWidget {
                 width: 200,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppColors.cardBg,
+                  color: AppColors.surface(context),
                   borderRadius: BorderRadius.circular(12),
                 ),
               )),
@@ -460,7 +460,7 @@ class _QUBOOptimizerCard extends StatelessWidget {
                   color: AppColors.primary, size: 18),
             ),
             const SizedBox(width: 12),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('QUBO / Simulated Annealing',
@@ -471,7 +471,7 @@ class _QUBOOptimizerCard extends StatelessWidget {
                 Text(
                     'Quantum-inspired route optimizer — Odisha 30-stop network',
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 11)),
+                        color: AppColors.textSub(context), fontSize: 11)),
               ],
             ),
             const Spacer(),
@@ -537,10 +537,10 @@ class _QUBOOptimizerCard extends StatelessWidget {
             ),
           ] else if (!isRunning) ...[
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'Click "Run Optimizer" to execute Simulated Annealing on the '
               'Odisha 30-stop QUBO delivery network and see real improvement metrics.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 12),
             ),
           ],
         ],
@@ -556,12 +556,12 @@ class _QStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
-          style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+          style: TextStyle(fontSize: 10, color: AppColors.labelText(context))),
       Text(value,
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary)),
+              color: AppColors.textMain(context))),
     ]);
   }
 }
@@ -574,8 +574,8 @@ class _QDistanceBar extends StatelessWidget {
     final saved = (before - after) / before;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        const Text('Route distance',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+        Text('Route distance',
+            style: TextStyle(color: AppColors.textSub(context), fontSize: 11)),
         const Spacer(),
         Text('${(saved * 100).toStringAsFixed(1)}% saved',
             style: const TextStyle(
@@ -636,12 +636,12 @@ class _AiInsightsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: response != null && !hasError
               ? AppColors.accent.withOpacity(0.3)
-              : AppColors.border,
+              : AppColors.divider(context),
         ),
       ),
       child: Column(
@@ -661,13 +661,13 @@ class _AiInsightsCard extends StatelessWidget {
                       color: AppColors.accent.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.auto_awesome,
+                    child: Icon(Icons.auto_awesome,
                         color: AppColors.accent, size: 16),
                   ),
                   const SizedBox(width: 10),
-                  const Text('AI Insights',
+                  Text('AI Insights',
                       style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.textMain(context),
                           fontWeight: FontWeight.w600,
                           fontSize: 14)),
                   const Spacer(),
@@ -688,15 +688,15 @@ class _AiInsightsCard extends StatelessWidget {
                   if (response != null)
                     IconButton(
                       onPressed: onAnalyze,
-                      icon: const Icon(Icons.refresh, size: 16),
+                      icon: Icon(Icons.refresh, size: 16),
                       tooltip: 'Re-analyze',
-                      color: AppColors.textSecondary,
+                      color: AppColors.textSub(context),
                     ),
                   Icon(
                     isExpanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSub(context),
                     size: 20,
                   ),
                 ],
@@ -706,7 +706,7 @@ class _AiInsightsCard extends StatelessWidget {
 
           // Body — collapsible
           if (isExpanded) ...[
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: AppColors.divider(context), height: 1),
             if (isLoading)
               Container(
                 padding: const EdgeInsets.all(24),
@@ -718,26 +718,26 @@ class _AiInsightsCard extends StatelessWidget {
                         height: 12,
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
+                          color: AppColors.surfaceAltOf(context),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         width: i == 3 ? 200 : double.infinity,
                       ),
                     ],
                     const SizedBox(height: 8),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: AppColors.accent),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text('Analyzing supply chain data...',
                             style: TextStyle(
-                                color: AppColors.textMuted, fontSize: 12)),
+                                color: AppColors.labelText(context), fontSize: 12)),
                       ],
                     ),
                   ],
@@ -757,27 +757,27 @@ class _AiInsightsCard extends StatelessWidget {
                               color: AppColors.warning.withOpacity(0.7),
                               size: 14),
                           const SizedBox(width: 6),
-                          const Text('Using cached analysis (API unavailable)',
+                          Text('Using cached analysis (API unavailable)',
                               style: TextStyle(
                                   color: AppColors.warning, fontSize: 11)),
                         ]),
                       ),
                     Text(response!,
-                        style: const TextStyle(
-                            color: AppColors.textSecondary,
+                        style: TextStyle(
+                            color: AppColors.textSub(context),
                             fontSize: 13,
                             height: 1.6)),
                   ],
                 ),
               )
             else
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Click "Get AI Analysis" to generate a DeepSeek-powered '
+                  'Click "Get AI Analysis" to generate a Gemini-powered '
                   'summary of your dashboard metrics and recommendations.',
                   style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      TextStyle(color: AppColors.textSub(context), fontSize: 12),
                 ),
               ),
           ],

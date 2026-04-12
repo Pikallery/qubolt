@@ -24,7 +24,7 @@ class UsersScreen extends ConsumerWidget {
     final users = ref.watch(_usersProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           if (!isMobile) const DarkSidebar(),
@@ -65,32 +65,32 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
           const SizedBox(width: 8),
         ],
-        const Icon(Icons.people_outline, color: AppColors.primary, size: 20),
+        Icon(Icons.people_outline, color: AppColors.primary, size: 20),
         const SizedBox(width: 10),
-        const Text('User Management',
+        Text('User Management',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textMain(context),
                 fontWeight: FontWeight.w600,
                 fontSize: 18)),
         const Spacer(),
         IconButton(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh,
-              color: AppColors.textSecondary, size: 18),
+          icon: Icon(Icons.refresh,
+              color: AppColors.textSub(context), size: 18),
         ),
       ]),
     );
@@ -218,39 +218,39 @@ class _UserCard extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(Icons.phone_outlined, color: AppColors.primary, size: 18),
           SizedBox(width: 8),
           Text('Set Phone Number',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+              style: TextStyle(color: AppColors.textMain(context), fontSize: 15)),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Enter the mobile number in international format.\nExample: +919876543210',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 12),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: AppColors.textPrimary),
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 hintText: '+91XXXXXXXXXX',
                 hintStyle:
-                    const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    TextStyle(color: AppColors.labelText(context), fontSize: 13),
                 filled: true,
                 fillColor: AppColors.scaffoldBg,
-                prefixIcon: const Icon(Icons.phone, color: AppColors.primary, size: 18),
+                prefixIcon: Icon(Icons.phone, color: AppColors.primary, size: 18),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: AppColors.divider(context)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: AppColors.divider(context)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -274,7 +274,7 @@ class _UserCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Save'),
+            child: Text('Save'),
           ),
         ],
       ),
@@ -320,9 +320,9 @@ class _UserCard extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Row(children: [
         CircleAvatar(
@@ -340,13 +340,13 @@ class _UserCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(name,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
+                  style: TextStyle(
+                      color: AppColors.textMain(context),
                       fontWeight: FontWeight.w600,
                       fontSize: 13)),
               Text(email,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 11)),
+                  style: TextStyle(
+                      color: AppColors.textSub(context), fontSize: 11)),
               const SizedBox(height: 2),
               // Phone row
               Row(children: [
@@ -370,8 +370,8 @@ class _UserCard extends ConsumerWidget {
               ]),
               const SizedBox(height: 2),
               Text(_id,
-                  style: const TextStyle(
-                      color: AppColors.textMuted,
+                  style: TextStyle(
+                      color: AppColors.labelText(context),
                       fontSize: 10,
                       fontFamily: 'monospace')),
             ],

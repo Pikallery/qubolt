@@ -203,8 +203,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             const SizedBox(width: 10),
             Text(
               initiated ? 'Call Initiated' : 'Call Simulated',
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
+              style: TextStyle(
+                  color: AppColors.textMain(context),
                   fontSize: 15,
                   fontWeight: FontWeight.w600),
             ),
@@ -216,31 +216,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           children: [
             Text(
               'Calling ${widget.recipientName}…',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                  color: AppColors.textSub(context), fontSize: 13),
             ),
             if (sid != null) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.scaffoldBg,
+                  color: AppColors.scaffold(context),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   'SID: $sid',
-                  style: const TextStyle(
-                      color: AppColors.textMuted,
+                  style: TextStyle(
+                      color: AppColors.labelText(context),
                       fontSize: 10,
                       fontFamily: 'monospace'),
                 ),
               ),
             ] else ...[
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'No phone number on file — call was simulated.',
                 style:
-                    TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    TextStyle(color: AppColors.labelText(context), fontSize: 12),
               ),
             ],
           ],
@@ -313,14 +313,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         roleColors[widget.recipientRole] ?? AppColors.textSecondary;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       appBar: AppBar(
         backgroundColor: AppColors.sidebarBg,
         elevation: 0,
         leading: Navigator.of(context).canPop()
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios,
-                    color: AppColors.textSecondary, size: 18),
+                icon: Icon(Icons.arrow_back_ios,
+                    color: AppColors.textSub(context), size: 18),
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
@@ -337,14 +337,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.recipientName,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
+                    style: TextStyle(
+                        color: AppColors.textMain(context),
                         fontWeight: FontWeight.w700,
                         fontSize: 14)),
                 if (widget.recipientCustomId != null)
                   Text(widget.recipientCustomId!,
-                      style: const TextStyle(
-                          color: AppColors.textMuted,
+                      style: TextStyle(
+                          color: AppColors.labelText(context),
                           fontSize: 10,
                           fontFamily: 'monospace')),
               ],
@@ -432,7 +432,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       const Icon(Icons.auto_awesome,
                           color: AppColors.accent, size: 14),
                       const SizedBox(width: 6),
-                      const Text('AI Suggestion',
+                      Text('AI Suggestion',
                           style: TextStyle(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w600,
@@ -440,8 +440,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       const Spacer(),
                       GestureDetector(
                         onTap: () => setState(() => _aiSuggestion = null),
-                        child: const Icon(Icons.close,
-                            color: AppColors.textMuted, size: 16),
+                        child: Icon(Icons.close,
+                            color: AppColors.labelText(context), size: 16),
                       ),
                     ],
                   ),
@@ -455,15 +455,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       _focusNode.requestFocus();
                     },
                     child: Text(_aiSuggestion!,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary,
+                        style: TextStyle(
+                            color: AppColors.textMain(context),
                             fontSize: 13,
                             height: 1.4)),
                   ),
                   const SizedBox(height: 4),
-                  const Text('Tap to insert',
+                  Text('Tap to insert',
                       style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                          TextStyle(color: AppColors.labelText(context), fontSize: 10)),
                 ],
               ),
             ),
@@ -471,9 +471,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Input bar
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            decoration: const BoxDecoration(
-              color: AppColors.sidebarBg,
-              border: Border(top: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              color: AppColors.sidebar(context),
+              border: Border(top: BorderSide(color: AppColors.divider(context))),
             ),
             child: SafeArea(
               top: false,
@@ -482,26 +482,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   child: TextField(
                     controller: _msgCtrl,
                     focusNode: _focusNode,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 14),
+                    style: TextStyle(
+                        color: AppColors.textMain(context), fontSize: 14),
                     maxLines: 4,
                     minLines: 1,
                     textInputAction: TextInputAction.newline,
                     decoration: InputDecoration(
                       hintText: 'Message ${widget.recipientName}…',
-                      hintStyle: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 13),
+                      hintStyle: TextStyle(
+                          color: AppColors.labelText(context), fontSize: 13),
                       filled: true,
                       fillColor: AppColors.cardBg,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: AppColors.divider(context)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: AppColors.divider(context)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -705,8 +705,8 @@ class _MessageBubble extends StatelessWidget {
                   isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
               children: [
                 Text(timeStr,
-                    style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 10)),
+                    style: TextStyle(
+                        color: AppColors.labelText(context), fontSize: 10)),
                 if (isMe) ...[
                   const SizedBox(width: 4),
                   Icon(
@@ -746,15 +746,15 @@ class _EmptyChat extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text('Start a conversation with $name',
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
+              style: TextStyle(
+                  color: AppColors.textMain(context),
                   fontWeight: FontWeight.w600,
                   fontSize: 15)),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Messages are stored in the database\nand delivered in-app',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: AppColors.textSub(context), fontSize: 12),
           ),
         ],
       ),

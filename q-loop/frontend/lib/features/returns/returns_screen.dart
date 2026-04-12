@@ -234,7 +234,7 @@ class _TopBar extends StatelessWidget {
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -354,7 +354,7 @@ class _ReturnCard extends StatelessWidget {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(extId.length > 24 ? '${extId.substring(0, 20)}…' : extId,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
             const SizedBox(height: 4),
             Text('Reason: ${reason.replaceAll('_', ' ')}',
                 style: TextStyle(
@@ -463,11 +463,11 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.assignment_return_outlined,
+          Icon(Icons.assignment_return_outlined,
               size: 48, color: AppColors.textSecondary),
           const SizedBox(height: 12),
-          const Text('No returns yet',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+          Text('No returns yet',
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 15)),
           const SizedBox(height: 6),
           Text('Click "Request Return" to initiate a reverse logistics flow.',
               style:

@@ -11,21 +11,21 @@ class ShipmentStatusChart extends StatelessWidget {
       height: 320,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Shipment Status',
+          Text('Shipment Status',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.textMain(context),
                   fontWeight: FontWeight.w600,
                   fontSize: 14)),
           const SizedBox(height: 4),
-          const Text('Last 30 days',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+          Text('Last 30 days',
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 11)),
           const SizedBox(height: 20),
           Expanded(
             child: PieChart(
@@ -79,7 +79,7 @@ class _Legend extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
       const SizedBox(width: 4),
       Text(label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+          style: TextStyle(color: AppColors.textSub(context), fontSize: 11)),
     ]);
   }
 }

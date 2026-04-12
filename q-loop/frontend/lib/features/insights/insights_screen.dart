@@ -69,7 +69,7 @@ class InsightsScreen extends ConsumerWidget {
     final isRunning = ref.watch(_saRunningProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           if (!isMobile) const DarkSidebar(),
@@ -145,28 +145,28 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
           const SizedBox(width: 8),
         ],
-        const Icon(Icons.auto_graph_outlined,
+        Icon(Icons.auto_graph_outlined,
             color: AppColors.primary, size: 20),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
               isMobile ? 'AI Insights' : 'AI Insights & Quantum Optimizer',
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
+              style: TextStyle(
+                  color: AppColors.textMain(context),
                   fontWeight: FontWeight.w600,
                   fontSize: 18),
               overflow: TextOverflow.ellipsis),
@@ -185,15 +185,15 @@ class _TopBar extends StatelessWidget {
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.black,
             textStyle:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           ),
         ),
         const SizedBox(width: 8),
         IconButton(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh,
-              color: AppColors.textSecondary, size: 18),
+          icon: Icon(Icons.refresh,
+              color: AppColors.textSub(context), size: 18),
           tooltip: 'Refresh insights',
         ),
       ]),
@@ -233,7 +233,7 @@ class _QUBOBanner extends StatelessWidget {
                 color: AppColors.primary, size: 26),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -248,7 +248,7 @@ class _QUBOBanner extends StatelessWidget {
                   'problem for last-mile delivery across Odisha. Routes are optimised to minimise '
                   'total travel distance while respecting vehicle capacity and time windows.',
                   style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      TextStyle(color: AppColors.textSub(context), fontSize: 12),
                 ),
               ],
             ),
@@ -275,9 +275,9 @@ class _InsightCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,13 +290,13 @@ class _InsightCard extends StatelessWidget {
                 color: AppColors.accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.psychology_outlined,
+              child: Icon(Icons.psychology_outlined,
                   color: AppColors.accent, size: 16),
             ),
             const SizedBox(width: 10),
-            const Text('AI Logistics Analysis',
+            Text('AI Logistics Analysis',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
             const Spacer(),
@@ -326,7 +326,7 @@ class _InsightCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 5),
-                const Text('Gemini',
+                Text('Gemini',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -336,8 +336,8 @@ class _InsightCard extends StatelessWidget {
           ]),
           const SizedBox(height: 14),
           Text(text,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13, height: 1.6)),
+              style: TextStyle(
+                  color: AppColors.textSub(context), fontSize: 13, height: 1.6)),
         ],
       ),
     );
@@ -352,16 +352,16 @@ class _InsightSkeleton extends StatelessWidget {
     return Container(
       height: 160,
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
-      child: const Center(
+      child: Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          CircularProgressIndicator(color: AppColors.primary),
-          SizedBox(height: 12),
+          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(height: 12),
           Text('Generating AI insights...',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 13)),
         ]),
       ),
     );
@@ -381,19 +381,19 @@ class _SAMetricsCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.show_chart, color: AppColors.primary, size: 18),
+            Icon(Icons.show_chart, color: AppColors.primary, size: 18),
             const SizedBox(width: 8),
-            const Text('SA Optimiser Performance (Last Run)',
+            Text('SA Optimiser Performance (Last Run)',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
             const Spacer(),
@@ -516,7 +516,7 @@ class _SAMetricsFromRoute extends StatelessWidget {
 class _SAMetricsStatic extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(spacing: 16, runSpacing: 12, children: [
@@ -533,7 +533,7 @@ class _SAMetricsStatic extends StatelessWidget {
               label: 'Route Distance Reduction', before: 342.8, after: 287.4),
           SizedBox(height: 8),
           Text('No routes in DB yet — click "Run QUBO" to generate real data.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              style: TextStyle(color: AppColors.labelText(context), fontSize: 11)),
         ]);
   }
 }
@@ -569,7 +569,7 @@ class _MetricChip extends StatelessWidget {
                 color: color, fontSize: 16, fontWeight: FontWeight.w700)),
         const SizedBox(height: 2),
         Text(label,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+            style: TextStyle(color: AppColors.labelText(context), fontSize: 10)),
       ]),
     );
   }
@@ -589,8 +589,8 @@ class _DistanceBar extends StatelessWidget {
       children: [
         Row(children: [
           Text(label,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12)),
+              style: TextStyle(
+                  color: AppColors.textSub(context), fontSize: 12)),
           const Spacer(),
           Text('${(improvement * 100).toStringAsFixed(1)}% saved',
               style: const TextStyle(
@@ -624,7 +624,7 @@ class _DistanceBar extends StatelessWidget {
               style: const TextStyle(color: AppColors.error, fontSize: 10)),
           const Spacer(),
           Text('${after.toStringAsFixed(1)} km (after)',
-              style: const TextStyle(color: AppColors.success, fontSize: 10)),
+              style: TextStyle(color: AppColors.success, fontSize: 10)),
         ]),
       ],
     );
@@ -641,19 +641,19 @@ class _QUBOCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(children: [
+          Row(children: [
             Icon(Icons.functions, color: AppColors.accent, size: 18),
             SizedBox(width: 8),
             Text('QUBO Problem Formulation',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
           ]),
@@ -661,7 +661,7 @@ class _QUBOCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.surfaceAlt,
+              color: AppColors.surfaceAltOf(context),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.borderLight),
             ),
@@ -682,13 +682,13 @@ class _QUBOCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Qubolt maps the Vehicle Routing Problem (VRP) onto a QUBO matrix '
             'and uses Simulated Annealing to approximate the ground state. '
             'This yields near-optimal routes 16–22% shorter than greedy baselines '
             'for Odisha\'s 30-stop delivery network.',
             style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 12, height: 1.6),
+                color: AppColors.textSub(context), fontSize: 12, height: 1.6),
           ),
         ],
       ),
@@ -704,11 +704,11 @@ class _OdishaKPIs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
@@ -716,7 +716,7 @@ class _OdishaKPIs extends StatelessWidget {
             SizedBox(width: 8),
             Text('Odisha Supply Chain KPIs',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textMain(context),
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
           ]),
@@ -767,7 +767,7 @@ class _KPICard extends StatelessWidget {
                   color: color, fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 3),
           Text(label,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+              style: TextStyle(color: AppColors.labelText(context), fontSize: 10)),
         ],
       ),
     );

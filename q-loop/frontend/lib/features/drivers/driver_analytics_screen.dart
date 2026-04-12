@@ -90,7 +90,7 @@ class _TopBar extends StatelessWidget {
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -243,7 +243,7 @@ class _DriverRow extends ConsumerWidget {
             ),
             child: Center(child: Text(
               name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(color: AppColors.primary,
+              style: TextStyle(color: AppColors.primary,
                 fontWeight: FontWeight.w700, fontSize: 14),
             )),
           ),
@@ -265,7 +265,7 @@ class _DriverRow extends ConsumerWidget {
           Expanded(
             flex: 1,
             child: Column(children: [
-              Text('$totalShipments', style: const TextStyle(
+              Text('$totalShipments', style: TextStyle(
                 fontWeight: FontWeight.w600, fontSize: 13)),
               Text('Shipments', style: TextStyle(
                 color: AppColors.labelText(context), fontSize: 10)),
@@ -298,9 +298,9 @@ class _DriverRow extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.star, color: AppColors.warning, size: 12),
+                  Icon(Icons.star, color: AppColors.warning, size: 12),
                   const SizedBox(width: 2),
-                  Text(avgRating.toStringAsFixed(1), style: const TextStyle(
+                  Text(avgRating.toStringAsFixed(1), style: TextStyle(
                     fontWeight: FontWeight.w600, fontSize: 13)),
                 ],
               ),
@@ -311,7 +311,7 @@ class _DriverRow extends ConsumerWidget {
           Expanded(
             flex: 1,
             child: Column(children: [
-              Text('${totalDist.toStringAsFixed(0)} km', style: const TextStyle(
+              Text('${totalDist.toStringAsFixed(0)} km', style: TextStyle(
                 fontWeight: FontWeight.w600, fontSize: 12)),
               Text('Distance', style: TextStyle(
                 color: AppColors.labelText(context), fontSize: 10)),
@@ -341,9 +341,9 @@ class _DriverRow extends ConsumerWidget {
         builder: (_) => AlertDialog(
           backgroundColor: AppColors.sidebar(context),
           title: Row(children: [
-            const Icon(Icons.person, color: AppColors.primary, size: 18),
+            Icon(Icons.person, color: AppColors.primary, size: 18),
             const SizedBox(width: 8),
-            Expanded(child: Text(name, style: const TextStyle(fontSize: 15))),
+            Expanded(child: Text(name, style: TextStyle(fontSize: 15))),
           ]),
           content: SizedBox(
             width: 480,
@@ -388,7 +388,7 @@ class _DriverRow extends ConsumerWidget {
                               color: AppColors.warning.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('DELAYED',
+                            child: Text('DELAYED',
                               style: TextStyle(fontSize: 9, color: AppColors.warning,
                                 fontWeight: FontWeight.w700)),
                           ),
@@ -404,7 +404,7 @@ class _DriverRow extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              child: Text('Close'),
             ),
           ],
         ),
@@ -445,10 +445,10 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(children: [
-          const Icon(Icons.people_outline, size: 48, color: AppColors.textSecondary),
+          Icon(Icons.people_outline, size: 48, color: AppColors.textSecondary),
           const SizedBox(height: 12),
-          const Text('No driver data yet',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+          Text('No driver data yet',
+            style: TextStyle(color: AppColors.textSub(context), fontSize: 15)),
           const SizedBox(height: 6),
           Text('Driver performance data will appear here once deliveries are tracked.',
             style: TextStyle(color: AppColors.labelText(context), fontSize: 13),

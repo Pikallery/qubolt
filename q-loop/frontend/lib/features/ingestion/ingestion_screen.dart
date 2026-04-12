@@ -24,7 +24,7 @@ class IngestionScreen extends ConsumerWidget {
     final jobs = ref.watch(_jobsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           if (!isMobile) const DarkSidebar(),
@@ -49,9 +49,9 @@ class IngestionScreen extends ConsumerWidget {
                         const SizedBox(height: 20),
 
                         // Job history
-                        const Text('Ingestion Jobs',
+                        Text('Ingestion Jobs',
                             style: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: AppColors.textMain(context),
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15)),
                         const SizedBox(height: 12),
@@ -86,33 +86,33 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
           const SizedBox(width: 8),
         ],
-        const Icon(Icons.upload_file_outlined,
+        Icon(Icons.upload_file_outlined,
             color: AppColors.primary, size: 20),
         const SizedBox(width: 10),
-        const Text('Data Ingestion',
+        Text('Data Ingestion',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textMain(context),
                 fontWeight: FontWeight.w600,
                 fontSize: 18)),
         const Spacer(),
         IconButton(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh,
-              color: AppColors.textSecondary, size: 18),
+          icon: Icon(Icons.refresh,
+              color: AppColors.textSub(context), size: 18),
         ),
       ]),
     );
@@ -164,11 +164,11 @@ class _UploadCardState extends ConsumerState<_UploadCard> {
                     fontSize: 15)),
           ]),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Upload a CSV or JSON file containing shipment records. '
             'The system validates, deduplicates and bulk-inserts into PostgreSQL. '
             'Supports up to 100,000 records per batch.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: AppColors.textSub(context), fontSize: 13),
           ),
           const SizedBox(height: 16),
 
@@ -176,24 +176,24 @@ class _UploadCardState extends ConsumerState<_UploadCard> {
           Container(
             height: 100,
             decoration: BoxDecoration(
-              color: AppColors.cardBg,
+              color: AppColors.surface(context),
               borderRadius: BorderRadius.circular(8),
               border:
-                  Border.all(color: AppColors.border, style: BorderStyle.solid),
+                  Border.all(color: AppColors.divider(context), style: BorderStyle.solid),
             ),
-            child: const Center(
+            child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.file_upload_outlined,
-                      color: AppColors.textMuted, size: 28),
+                      color: AppColors.labelText(context), size: 28),
                   SizedBox(height: 6),
                   Text('Drop CSV / JSON here',
                       style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                          TextStyle(color: AppColors.labelText(context), fontSize: 13)),
                   Text('shipments.csv · max 100k rows',
                       style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                          TextStyle(color: AppColors.labelText(context), fontSize: 10)),
                 ],
               ),
             ),
@@ -217,17 +217,17 @@ class _UploadCardState extends ConsumerState<_UploadCard> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
                 textStyle:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
             const SizedBox(width: 12),
             OutlinedButton.icon(
               onPressed: () {},
-              icon: const Icon(Icons.download_outlined, size: 16),
-              label: const Text('Download Template'),
+              icon: Icon(Icons.download_outlined, size: 16),
+              label: Text('Download Template'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textSecondary,
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.divider(context)),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
@@ -291,9 +291,9 @@ class _StatBox extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Row(children: [
         Container(
@@ -311,7 +311,7 @@ class _StatBox extends StatelessWidget {
               style: TextStyle(
                   color: color, fontSize: 16, fontWeight: FontWeight.w700)),
           Text(label,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+              style: TextStyle(color: AppColors.labelText(context), fontSize: 10)),
         ]),
       ]),
     );
@@ -337,9 +337,9 @@ class _JobList extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
+            color: AppColors.surface(context),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.divider(context)),
           ),
           child: Row(children: [
             Container(
@@ -365,14 +365,14 @@ class _JobList extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(m['filename'] as String? ?? 'shipments_batch.csv',
-                      style: const TextStyle(
-                          color: AppColors.textPrimary,
+                      style: TextStyle(
+                          color: AppColors.textMain(context),
                           fontWeight: FontWeight.w600,
                           fontSize: 12)),
                   Text(
                     '${m['records_total'] ?? 1200} records · ${m['created_at'] ?? 'Today'}',
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 11),
+                    style: TextStyle(
+                        color: AppColors.textSub(context), fontSize: 11),
                   ),
                 ],
               ),

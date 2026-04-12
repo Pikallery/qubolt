@@ -18,7 +18,7 @@ class FleetScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < 768;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           if (!isMobile) const DarkSidebar(),
@@ -57,25 +57,25 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(children: [
         if (isMobile && Navigator.of(context).canPop()) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
           const SizedBox(width: 8),
         ],
-        const Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 20),
+        Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 20),
         const SizedBox(width: 10),
-        const Text('Fleet Control Room',
+        Text('Fleet Control Room',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.textMain(context),
                 fontWeight: FontWeight.w600,
                 fontSize: 18)),
         const Spacer(),
@@ -89,18 +89,18 @@ class _TopBar extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
               width: 6, height: 6,
-              decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
             ),
             const SizedBox(width: 6),
             Text('$count Active',
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.success, fontSize: 11, fontWeight: FontWeight.w600)),
           ]),
         ),
         const SizedBox(width: 12),
         IconButton(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh, color: AppColors.textSecondary, size: 18),
+          icon: Icon(Icons.refresh, color: AppColors.textSub(context), size: 18),
           tooltip: 'Refresh fleet',
         ),
       ]),
@@ -128,8 +128,8 @@ class _DesktopLayoutState extends State<_DesktopLayout> {
         SizedBox(
           width: 320,
           child: Container(
-            decoration: const BoxDecoration(
-              border: Border(right: BorderSide(color: AppColors.border)),
+            decoration: BoxDecoration(
+              border: Border(right: BorderSide(color: AppColors.divider(context))),
             ),
             child: Column(
               children: [
@@ -323,7 +323,7 @@ class _FleetSummaryStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      color: AppColors.sidebarBg,
+      color: AppColors.sidebar(context),
       child: Row(children: [
         _FleetStat('En Route',
             '${trucks.where((t) => t.status == 'en_route').length}', AppColors.accent),
@@ -348,7 +348,7 @@ class _FleetStat extends StatelessWidget {
         Text(value,
             style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
         Text(label,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+            style: TextStyle(color: AppColors.labelText(context), fontSize: 10)),
       ]),
     );
   }
@@ -396,16 +396,16 @@ class _TruckCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(truck.id,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
+                    style: TextStyle(
+                        color: AppColors.textMain(context),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                         fontFamily: 'monospace')),
                 const SizedBox(height: 2),
                 Text(truck.name,
-                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                    style: TextStyle(color: AppColors.textSub(context), fontSize: 11)),
                 Text('${truck.speedKmh.toStringAsFixed(0)} km/h',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                    style: TextStyle(color: AppColors.labelText(context), fontSize: 10)),
               ],
             ),
           ),

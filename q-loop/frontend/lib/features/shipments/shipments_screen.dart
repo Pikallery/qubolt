@@ -163,7 +163,7 @@ class _TopBar extends StatelessWidget {
         children: [
           if (isMobile) ...[
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios, size: 18),
+              icon: Icon(Icons.arrow_back_ios, size: 18),
               onPressed: () => Navigator.of(context).pop(),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -209,10 +209,10 @@ class _FilterBar extends StatelessWidget {
           DropdownButtonHideUnderline(
             child: DropdownButton<String?>(
               value: statusFilter,
-              hint: const Text('All statuses', style: TextStyle(fontSize: 13)),
+              hint: Text('All statuses', style: TextStyle(fontSize: 13)),
               dropdownColor: AppColors.cardBg,
               style:
-                  const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                  TextStyle(color: AppColors.textMain(context), fontSize: 13),
               items: const [
                 DropdownMenuItem(value: null, child: Text('All statuses')),
                 DropdownMenuItem(value: 'pending', child: Text('Pending')),
@@ -231,7 +231,7 @@ class _FilterBar extends StatelessWidget {
             height: 36,
             child: TextField(
               controller: regionCtrl,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'Filter by region…',
                 hintStyle: TextStyle(
@@ -297,7 +297,7 @@ class _ShipmentRow extends ConsumerWidget {
                       24
                   ? '${(s['external_id'] as String? ?? '').substring(0, 20)}…'
                   : (s['external_id'] as String? ?? s['id'] as String? ?? '—'),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              style: TextStyle(fontFamily: 'monospace', fontSize: 12),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -316,7 +316,7 @@ class _ShipmentRow extends ConsumerWidget {
                   size: 14, color: AppColors.primary),
               const SizedBox(width: 4),
               Text(s['vehicle_type'] as String? ?? '—',
-                  style: const TextStyle(fontSize: 12)),
+                  style: TextStyle(fontSize: 12)),
             ]),
           ),
           // Mode
@@ -404,19 +404,19 @@ class _ShipmentRow extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Estimated arrival: $eta',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w700)),
               if (confidence != null) ...[
                 const SizedBox(height: 8),
                 Text('Confidence: ${(confidence * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                    style: TextStyle(
+                        color: AppColors.textSub(context), fontSize: 13)),
               ],
               if (explanation.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(explanation,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary,
+                    style: TextStyle(
+                        color: AppColors.textSub(context),
                         fontSize: 13,
                         height: 1.5)),
               ],
@@ -425,7 +425,7 @@ class _ShipmentRow extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              child: Text('Close'),
             ),
           ],
         ),
@@ -566,21 +566,21 @@ class _ProofOfDeliveryDialogState extends State<_ProofOfDeliveryDialog> {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.photo_camera_outlined,
+                  child: Icon(Icons.photo_camera_outlined,
                       color: AppColors.primary, size: 18),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text('Proof of Delivery',
                       style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.textMain(context),
                           fontWeight: FontWeight.w700,
                           fontSize: 15)),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close,
-                      color: AppColors.textMuted, size: 18),
+                  icon: Icon(Icons.close,
+                      color: AppColors.labelText(context), size: 18),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -588,8 +588,8 @@ class _ProofOfDeliveryDialogState extends State<_ProofOfDeliveryDialog> {
               const SizedBox(height: 4),
               Text(
                 'Shipment ${widget.shipmentId.length > 20 ? "${widget.shipmentId.substring(0, 18)}…" : widget.shipmentId}',
-                style: const TextStyle(
-                    color: AppColors.textMuted,
+                style: TextStyle(
+                    color: AppColors.labelText(context),
                     fontSize: 11,
                     fontFamily: 'monospace'),
               ),
@@ -612,14 +612,14 @@ class _ProofOfDeliveryDialogState extends State<_ProofOfDeliveryDialog> {
     if (_error != null) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.error_outline, color: AppColors.error, size: 32),
+          Icon(Icons.error_outline, color: AppColors.error, size: 32),
           const SizedBox(height: 8),
-          const Text('Failed to load photos',
+          Text('Failed to load photos',
               style: TextStyle(color: AppColors.error)),
           const SizedBox(height: 4),
           Text(_error!,
-              style: const TextStyle(
-                  color: AppColors.textMuted, fontSize: 11)),
+              style: TextStyle(
+                  color: AppColors.labelText(context), fontSize: 11)),
         ]),
       );
     }
@@ -630,14 +630,14 @@ class _ProofOfDeliveryDialogState extends State<_ProofOfDeliveryDialog> {
               size: 48,
               color: AppColors.textMuted.withValues(alpha: 0.4)),
           const SizedBox(height: 12),
-          const Text('No photos uploaded yet',
+          Text('No photos uploaded yet',
               style: TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.textSub(context),
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          const Text('Driver uploads proof of delivery on completion',
+          Text('Driver uploads proof of delivery on completion',
               style:
-                  TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  TextStyle(color: AppColors.labelText(context), fontSize: 12)),
         ]),
       );
     }
@@ -747,7 +747,7 @@ class _PhotoTileState extends State<_PhotoTile> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Container(
-        color: AppColors.surfaceAlt,
+        color: AppColors.surfaceAltOf(context),
         child: const Center(
           child: SizedBox(
             width: 20, height: 20,
@@ -759,10 +759,10 @@ class _PhotoTileState extends State<_PhotoTile> {
     }
     if (_bytes == null) {
       return Container(
-        color: AppColors.surfaceAlt,
-        child: const Center(
+        color: AppColors.surfaceAltOf(context),
+        child: Center(
           child: Icon(Icons.broken_image_outlined,
-              color: AppColors.textMuted, size: 28),
+              color: AppColors.labelText(context), size: 28),
         ),
       );
     }

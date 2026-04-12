@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import uuid
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 
@@ -70,11 +70,9 @@ class ZoneCheckResult(BaseModel):
 
 
 class AutoAssignResult(BaseModel):
-    shipment_id: uuid.UUID
-    zone_id: uuid.UUID | None
-    zone_name: str | None
-    assigned_driver_id: uuid.UUID | None
-    assigned_driver_name: str | None
+    assigned: int
+    unmatched: int
+    details: list[dict]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -169,58 +167,29 @@ async def seed_odisha_zones(
 
 
 @router.post("/auto-assign", response_model=AutoAssignResult)
-async def auto_assign_shipment(
+async def auto_assign_bulk(
     tenant: CurrentTenant,
     current_user: CurrentUser,
     db: DBSession,
-    shipment_id: uuid.UUID = Query(...),
+    limit: int = Query(default=100, ge=1, le=500),
 ):
-    # Fetch shipment
-    result = await db.execute(
-        select(Shipment).where(Shipment.id == shipment_id, Shipment.tenant_id == tenant.id)
-    )
-    shipment = result.scalar_one_or_none()
-    if not shipment:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-
-    # Find which zone this shipment falls in (using origin or dest address lat/lon from events)
-    # For simplicity we look at the most recent event with location data
+    """
+    Bulk auto-assign pending shipments to zones based on their most recent
+    location event. No shipment_id required — processes up to `limit` shipments.
+    """
+    from datetime import datetime, timezone
     from app.models.shipment import ShipmentEvent
-    evt_result = await db.execute(
-        select(ShipmentEvent)
-        .where(ShipmentEvent.shipment_id == shipment_id)
-        .where(ShipmentEvent.location_lat.is_not(None))
-        .order_by(ShipmentEvent.occurred_at.desc())
-        .limit(1)
-    )
-    event = evt_result.scalar_one_or_none()
 
-    if not event:
-        raise HTTPException(status_code=400, detail="No location data for this shipment")
-
-    lat, lon = float(event.location_lat), float(event.location_lon)
-
-    # Find matching zone
+    # Load all active zones once
     zone_result = await db.execute(
         select(GeoZone).where(GeoZone.tenant_id == tenant.id, GeoZone.is_active == True)
     )
     zones = zone_result.scalars().all()
 
-    matched_zone = None
-    min_dist = float("inf")
-    for z in zones:
-        dist = haversine_km(lat, lon, z.center_lat, z.center_lon)
-        if dist <= z.radius_km and dist < min_dist:
-            matched_zone = z
-            min_dist = dist
+    if not zones:
+        return AutoAssignResult(assigned=0, unmatched=0, details=[])
 
-    if not matched_zone:
-        return AutoAssignResult(
-            shipment_id=shipment_id, zone_id=None, zone_name=None,
-            assigned_driver_id=None, assigned_driver_name=None,
-        )
-
-    # Find nearest driver in zone using driver_locations
+    # Load all drivers with known locations once
     driver_result = await db.execute(
         select(DriverLocation, User)
         .join(User, DriverLocation.driver_id == User.id)
@@ -230,36 +199,83 @@ async def auto_assign_shipment(
             User.is_active == True,
         )
     )
-    rows = driver_result.all()
+    driver_rows = driver_result.all()
 
-    nearest_driver = None
-    nearest_dist = float("inf")
-    for dl, user in rows:
-        d = haversine_km(lat, lon, dl.lat, dl.lon)
-        if d <= matched_zone.radius_km and d < nearest_dist:
-            nearest_driver = user
-            nearest_dist = d
-
-    if nearest_driver:
-        # Create an assignment event
-        from datetime import datetime, timezone
-        assignment_event = ShipmentEvent(
-            shipment_id=shipment_id,
-            tenant_id=tenant.id,
-            event_type="auto_assigned",
-            location_lat=lat,
-            location_lon=lon,
-            note=f"Auto-assigned to driver {nearest_driver.full_name} in zone {matched_zone.name}",
-            recorded_by=current_user.id,
-            occurred_at=datetime.now(timezone.utc),
+    # Fetch pending/in_transit shipments that have location events
+    shipment_result = await db.execute(
+        select(Shipment)
+        .where(
+            Shipment.tenant_id == tenant.id,
+            Shipment.status.in_(["pending", "in_transit", "picked_up"]),
         )
-        db.add(assignment_event)
-        await db.flush()
-
-    return AutoAssignResult(
-        shipment_id=shipment_id,
-        zone_id=matched_zone.id,
-        zone_name=matched_zone.name,
-        assigned_driver_id=nearest_driver.id if nearest_driver else None,
-        assigned_driver_name=nearest_driver.full_name if nearest_driver else None,
+        .limit(limit)
     )
+    shipments = shipment_result.scalars().all()
+
+    assigned_count = 0
+    unmatched_count = 0
+    details: list[dict] = []
+
+    for shipment in shipments:
+        # Get most recent location event
+        evt_result = await db.execute(
+            select(ShipmentEvent)
+            .where(
+                ShipmentEvent.shipment_id == shipment.id,
+                ShipmentEvent.location_lat.is_not(None),
+            )
+            .order_by(ShipmentEvent.occurred_at.desc())
+            .limit(1)
+        )
+        event = evt_result.scalar_one_or_none()
+
+        if not event:
+            unmatched_count += 1
+            continue
+
+        lat, lon = float(event.location_lat), float(event.location_lon)
+
+        # Find nearest zone
+        matched_zone = None
+        min_dist = float("inf")
+        for z in zones:
+            dist = haversine_km(lat, lon, z.center_lat, z.center_lon)
+            if dist <= z.radius_km and dist < min_dist:
+                matched_zone = z
+                min_dist = dist
+
+        if not matched_zone:
+            unmatched_count += 1
+            continue
+
+        # Find nearest driver in zone
+        nearest_driver = None
+        nearest_dist = float("inf")
+        for dl, user in driver_rows:
+            d = haversine_km(lat, lon, dl.lat, dl.lon)
+            if d <= matched_zone.radius_km and d < nearest_dist:
+                nearest_driver = user
+                nearest_dist = d
+
+        if nearest_driver:
+            db.add(ShipmentEvent(
+                shipment_id=shipment.id,
+                tenant_id=tenant.id,
+                event_type="auto_assigned",
+                location_lat=lat,
+                location_lon=lon,
+                note=f"Auto-assigned to {nearest_driver.full_name} in zone {matched_zone.name}",
+                recorded_by=current_user.id,
+                occurred_at=datetime.now(timezone.utc),
+            ))
+
+        assigned_count += 1
+        details.append({
+            "shipment_id": str(shipment.id),
+            "zone_id": str(matched_zone.id),
+            "zone_name": matched_zone.name,
+            "driver": nearest_driver.full_name if nearest_driver else None,
+        })
+
+    await db.flush()
+    return AutoAssignResult(assigned=assigned_count, unmatched=unmatched_count, details=details)

@@ -124,7 +124,7 @@ class _GeofenceScreenState extends ConsumerState<GeofenceScreen> {
     final zonesAsync = ref.watch(_zonesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Row(
         children: [
           if (!isMobile) const DarkSidebar(),
@@ -188,14 +188,14 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.sidebarBg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebar(context),
+        border: Border(bottom: BorderSide(color: AppColors.divider(context))),
       ),
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios,
+            icon: Icon(Icons.arrow_back_ios,
                 size: 18, color: AppColors.textSecondary),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
@@ -203,13 +203,13 @@ class _TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
         ],
-        const Icon(Icons.location_on_outlined,
+        Icon(Icons.location_on_outlined,
             color: AppColors.primary, size: 20),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Text('Geofence Zones',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.textMain(context),
                   fontWeight: FontWeight.w600,
                   fontSize: 18)),
         ),
@@ -492,19 +492,19 @@ class _SidePanel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.cardBg,
+              color: AppColors.surface(context),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.divider(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(children: [
+                Row(children: [
                   Icon(Icons.my_location, color: AppColors.accent, size: 16),
                   SizedBox(width: 6),
                   Text('Check Point in Zone',
                       style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.textMain(context),
                           fontWeight: FontWeight.w600,
                           fontSize: 13)),
                 ]),
@@ -569,8 +569,8 @@ class _SidePanel extends StatelessWidget {
           // ── Zone list ───────────────────────────────────────────────────────
           Text(
             zones.isEmpty ? 'No zones yet — click "Seed Odisha"' : 'All Zones',
-            style: const TextStyle(
-                color: AppColors.textSecondary,
+            style: TextStyle(
+                color: AppColors.textSub(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w600),
           ),
@@ -610,8 +610,8 @@ class _StatPill extends StatelessWidget {
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(
-                  color: AppColors.textMuted, fontSize: 11)),
+              style: TextStyle(
+                  color: AppColors.labelText(context), fontSize: 11)),
         ]),
       ),
     );
@@ -635,9 +635,9 @@ class _ZoneCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
       child: Row(children: [
         Container(
@@ -651,15 +651,15 @@ class _ZoneCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name,
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
+                style: TextStyle(
+                    color: AppColors.textMain(context),
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
             if (district.isNotEmpty || state.isNotEmpty)
               Text(
                 [district, state].where((s) => s.isNotEmpty).join(', '),
-                style: const TextStyle(
-                    color: AppColors.textMuted, fontSize: 11),
+                style: TextStyle(
+                    color: AppColors.labelText(context), fontSize: 11),
               ),
           ]),
         ),
@@ -750,20 +750,20 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.divider(context)),
       ),
-      child: const Column(mainAxisSize: MainAxisSize.min, children: [
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.location_off_outlined,
             size: 36, color: AppColors.textMuted),
         SizedBox(height: 8),
         Text('No geofence zones yet',
             style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 13)),
+                color: AppColors.textSub(context), fontSize: 13)),
         SizedBox(height: 4),
         Text('Click "Seed Odisha" to load pre-built district zones.',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+            style: TextStyle(color: AppColors.labelText(context), fontSize: 11),
             textAlign: TextAlign.center),
       ]),
     );

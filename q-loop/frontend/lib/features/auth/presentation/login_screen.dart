@@ -66,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.scaffold(context),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -88,23 +88,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child:
-                          const Icon(Icons.loop, color: Colors.black, size: 22),
+                          Icon(Icons.loop, color: Colors.black, size: 22),
                     ),
                     const SizedBox(width: 12),
                     Text('Qubolt',
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.textMain(context),
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.2,
                                 )),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('Supply Chain Intelligence',
+                Text('Supply Chain Intelligence',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                        color: AppColors.textSub(context), fontSize: 13)),
                 const SizedBox(height: 40),
 
                 // Email field
@@ -160,7 +160,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.black))
-                        : const Text('Sign In',
+                        : Text('Sign In',
                             style: TextStyle(
                                 fontWeight: FontWeight.w600, fontSize: 15)),
                   ),
@@ -169,9 +169,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 20),
 
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Text("Don't have an account? ",
+                  Text("Don't have an account? ",
                       style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13)),
+                          color: AppColors.textSub(context), fontSize: 13)),
                   GestureDetector(
                     onTap: () => context.go('/signup'),
                     child: const Text('Create Account',
@@ -211,8 +211,8 @@ class _InputField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary,
+            style: TextStyle(
+                color: AppColors.textSub(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
@@ -220,19 +220,19 @@ class _InputField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textMuted),
+            hintStyle: TextStyle(color: AppColors.textMuted),
             filled: true,
             fillColor: AppColors.cardBg,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: AppColors.divider(context)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: AppColors.divider(context)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),

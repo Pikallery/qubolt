@@ -47,17 +47,32 @@ class AppColors {
 
   // ── Theme-aware helpers ───────────────────────────────────────────────────
 
+  static bool _dark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color scaffold(BuildContext context) =>
+      _dark(context) ? scaffoldBg : lightScaffoldBg;
+
   static Color surface(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? cardBg : lightCardBg;
+      _dark(context) ? cardBg : lightCardBg;
+
+  static Color surfaceAltOf(BuildContext context) =>
+      _dark(context) ? surfaceAlt : lightSurfaceAlt;
 
   static Color sidebar(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? sidebarBg : lightSidebarBg;
+      _dark(context) ? sidebarBg : lightSidebarBg;
 
   static Color divider(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? border : lightBorder;
+      _dark(context) ? border : lightBorder;
+
+  static Color textMain(BuildContext context) =>
+      _dark(context) ? textPrimary : lightTextPrimary;
+
+  static Color textSub(BuildContext context) =>
+      _dark(context) ? textSecondary : lightTextSecondary;
 
   static Color labelText(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? textMuted : lightTextMuted;
+      _dark(context) ? textMuted : lightTextMuted;
 
   // ── Status chips ──────────────────────────────────────────────────────────
   static Color statusColor(String status) {

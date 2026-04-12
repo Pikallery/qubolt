@@ -126,7 +126,7 @@ class _TopBar extends StatelessWidget {
       child: Row(children: [
         if (isMobile) ...[
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, size: 18),
+            icon: Icon(Icons.arrow_back_ios, size: 18),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -191,7 +191,7 @@ class _OptimizerCard extends StatelessWidget {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.black,
                 textStyle:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
           ]),
@@ -273,7 +273,7 @@ class _OptimizationResult extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text('${stop['area'] ?? '—'} (${stop['pincode'] ?? '—'})',
-                    style: const TextStyle(fontSize: 12)),
+                    style: TextStyle(fontSize: 12)),
                 const SizedBox(width: 8),
                 Text(
                     '${(stop['latitude'] as num).toStringAsFixed(4)}, '
@@ -398,7 +398,7 @@ class _RouteCard extends StatelessWidget {
         context: context,
         builder: (_) => AlertDialog(
           backgroundColor: AppColors.cardBg,
-          title: const Row(children: [
+          title: Row(children: [
             Icon(Icons.auto_awesome, color: AppColors.accent, size: 18),
             SizedBox(width: 8),
             Text('AI Route Analysis', style: TextStyle(fontSize: 15)),
@@ -407,8 +407,8 @@ class _RouteCard extends StatelessWidget {
             width: 400,
             child: SingleChildScrollView(
               child: Text(explanation,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary,
+                  style: TextStyle(
+                      color: AppColors.textSub(context),
                       fontSize: 13,
                       height: 1.6)),
             ),
@@ -416,7 +416,7 @@ class _RouteCard extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              child: Text('Close'),
             ),
           ],
         ),
@@ -483,11 +483,11 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(children: [
-          const Icon(Icons.route_outlined,
+          Icon(Icons.route_outlined,
               size: 48, color: AppColors.textSecondary),
           const SizedBox(height: 12),
-          const Text('No routes yet',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+          Text('No routes yet',
+              style: TextStyle(color: AppColors.textSub(context), fontSize: 15)),
           const SizedBox(height: 6),
           Text(
               'Click "Build & Optimize Route" above to create your first optimized route.',
