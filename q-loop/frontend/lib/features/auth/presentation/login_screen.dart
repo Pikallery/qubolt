@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/animations/quantum_particle_background.dart';
+import '../../../core/animations/quantum_warp_transition.dart';
 import '../domain/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -26,6 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
+  bool _warping = false;
   String? _error;
 
   @override
@@ -46,8 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passCtrl.text,
           );
       if (mounted) {
-        final role = ref.read(authNotifierProvider).role;
-        context.go(_routeForRole(role));
+        setState(() => _warping = true);
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -67,7 +69,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffold(context),
-      body: Center(
+      body: QuantumParticleBackground(
+        child: Stack(
+          children: [
+            Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Padding(
@@ -184,6 +189,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
           ),
+        ),
+            ),
+            if (_warping)
+              QuantumWarpOverlay(
+                onComplete: () {
+                  final role = ref.read(authNotifierProvider).role;
+                  context.go(_routeForRole(role));
+                },
+              ),
+          ],
         ),
       ),
     );

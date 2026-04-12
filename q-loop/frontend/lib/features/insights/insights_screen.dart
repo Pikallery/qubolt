@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/animations/ai_materialize_card.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
@@ -272,74 +273,59 @@ class _InsightCard extends StatelessWidget {
         insight['message'] as String? ??
         'No insight available.';
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.psychology_outlined,
-                  color: AppColors.accent, size: 16),
+    return AiMaterializeCard(
+      text: text,
+      header: Row(children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(Icons.psychology_outlined,
+              color: AppColors.accent, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Text('AI Logistics Analysis',
+            style: TextStyle(
+                color: AppColors.textMain(context),
+                fontWeight: FontWeight.w600,
+                fontSize: 14)),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF4285F4), Color(0xFF34A853),
+                       Color(0xFFFBBC05), Color(0xFFEA4335)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 10),
-            Text('AI Logistics Analysis',
-                style: TextStyle(
-                    color: AppColors.textMain(context),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14)),
-            const Spacer(),
-            // Powered by Gemini badge
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4285F4), Color(0xFF34A853),
-                           Color(0xFFFBBC05), Color(0xFFEA4335)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 14, height: 14,
-                  decoration: const BoxDecoration(
-                    color: Colors.white, shape: BoxShape.circle),
-                  child: const Center(
-                    child: Text('G',
-                        style: TextStyle(
-                            color: Color(0xFF4285F4),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900)),
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Text('Gemini',
+              width: 14, height: 14,
+              decoration: const BoxDecoration(
+                color: Colors.white, shape: BoxShape.circle),
+              child: const Center(
+                child: Text('G',
                     style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600)),
-              ]),
+                        color: Color(0xFF4285F4),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900)),
+              ),
             ),
+            const SizedBox(width: 5),
+            const Text('Gemini',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600)),
           ]),
-          const SizedBox(height: 14),
-          Text(text,
-              style: TextStyle(
-                  color: AppColors.textSub(context), fontSize: 13, height: 1.6)),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 }

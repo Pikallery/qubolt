@@ -142,7 +142,7 @@ class DashboardScreen extends ConsumerWidget {
                         LayoutBuilder(builder: (ctx, constraints) {
                           final wide = constraints.maxWidth > 900;
                           final mapWidget = GestureDetector(
-                            onTap: () => context.push('/fleet'),
+                            onTap: () => context.push('/map'),
                             child: Stack(
                               children: [
                                 const GhostRouteMap(),
@@ -166,7 +166,7 @@ class DashboardScreen extends ConsumerWidget {
                                             color: AppColors.primary, size: 14),
                                         SizedBox(width: 6),
                                         Text(
-                                          'Tap to view live fleet',
+                                          'Tap for Live Map',
                                           style: TextStyle(
                                             color: AppColors.primary,
                                             fontSize: 11,

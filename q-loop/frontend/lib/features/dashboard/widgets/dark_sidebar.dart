@@ -63,6 +63,8 @@ class DarkSidebar extends ConsumerWidget {
             label: 'Returns', route: '/returns', currentPath: path, isDark: isDark),
           _NavItem(icon: Icons.location_on_outlined,
             label: 'Geofence', route: '/geofence', currentPath: path, isDark: isDark),
+          _NavItem(icon: Icons.map_outlined,
+            label: 'Live Map', route: '/map', currentPath: path, isDark: isDark),
 
           const SizedBox(height: 8),
           _Section(label: 'INTELLIGENCE', isDark: isDark),
