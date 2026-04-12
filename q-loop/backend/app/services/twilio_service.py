@@ -2,7 +2,7 @@
 Twilio masked VoIP + SMS service.
 
 All phone numbers are masked — drivers and customers never see each other's
-real numbers. Twilio proxies the call through a Q-Loop owned number.
+real numbers. Twilio proxies the call through a Qubolt owned number.
 Calls are logged to the notifications table for audit.
 """
 from __future__ import annotations
@@ -150,9 +150,9 @@ async def notify_delivery_event(
     messages = {
         "picked_up": "Your order has been picked up and is on its way.",
         "in_transit": "Your delivery is in transit and will arrive soon.",
-        "delivered": "Your order has been delivered. Thank you for choosing Q-Loop.",
+        "delivered": "Your order has been delivered. Thank you for choosing Qubolt.",
         "failed": "We were unable to deliver your order. Our team will contact you shortly.",
-        "exception": "There is an update regarding your delivery. Please check your Q-Loop app.",
+        "exception": "There is an update regarding your delivery. Please check your Qubolt app.",
     }
     body = messages.get(event_type, f"Update on shipment {shipment_id}: {event_type}")
 

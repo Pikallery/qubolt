@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    APP_NAME: str = "Q-Loop"
+    APP_NAME: str = "Qubolt"
     APP_ENV: Literal["development", "staging", "production"] = "development"
     APP_VERSION: str = "0.1.0"
     LOG_LEVEL: str = "INFO"
@@ -41,13 +41,12 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     QR_TOKEN_EXPIRE_SECONDS: int = 300  # 5 minutes
 
-    # NVIDIA / DeepSeek
-    NVIDIA_API_KEY: str = "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"
-    NVIDIA_API_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    DEEPSEEK_MODEL: str = "deepseek-ai/deepseek-v3.2"
-    DEEPSEEK_TEMPERATURE: float = 0.6
-    DEEPSEEK_TOP_P: float = 0.7
-    DEEPSEEK_MAX_TOKENS: int = 4096
+    # Google Gemini AI
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_TEMPERATURE: float = 0.6
+    GEMINI_TOP_P: float = 0.9
+    GEMINI_MAX_TOKENS: int = 4096
     AI_CONCURRENCY_LIMIT: int = 5
 
     # Twilio
@@ -83,7 +82,7 @@ class Settings(BaseSettings):
     def cors_origins(self) -> list[str]:
         if self.APP_ENV == "development":
             return ["*"]
-        return ["https://app.q-loop.io"]
+        return ["https://app.qubolt.io"]
 
 
 @lru_cache

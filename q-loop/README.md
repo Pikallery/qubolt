@@ -1,14 +1,14 @@
-# Q-Loop — Supply Chain Optimization MVP
+# Qubolt — Supply Chain Optimization Platform
 
 B2B SaaS that eliminates **empty-run inefficiencies** by simultaneously
-optimizing delivery, returns, and disposal.
+optimizing delivery, returns, and disposal across Odisha's logistics network.
 
 ---
 
 ## Architecture
 
 ```
-q-loop/
+qubolt/
 ├── backend/          FastAPI + PostgreSQL + Celery + Redis
 └── frontend/         Flutter (Web Dashboard + Android/iOS Driver & Gatekeeper)
 ```
@@ -18,13 +18,14 @@ q-loop/
 |---|---|
 | API | FastAPI (async) + Pydantic v2 |
 | Database | PostgreSQL 16 + SQLAlchemy 2 (async) |
-| Migrations | Alembic (4 versions) |
+| Migrations | Alembic |
 | Queue | Celery + Redis |
 | Auth | Stateless JWT (HS256) + HMAC-SHA256 QR tokens |
 | Routing | Simulated Annealing (pure Python, no solver dep) |
-| AI | DeepSeek-R1 via NVIDIA API (OpenAI-compatible) |
+| AI | **Google Gemini** (`gemini-1.5-flash`) |
 | Comms | Twilio masked VoIP + SMS fallback |
 | Frontend | Flutter + Riverpod + go_router + Mapbox GL |
+| Firebase | Firestore real-time chat · Analytics · Remote Config |
 
 ---
 
@@ -33,8 +34,7 @@ q-loop/
 ### 1. Copy environment
 ```bash
 cp .env.example .env
-# Fill in TWILIO_* and MAPBOX_ACCESS_TOKEN
-# NVIDIA_API_KEY is pre-filled for DeepSeek-R1
+# Fill in GEMINI_API_KEY, TWILIO_*, and MAPBOX_ACCESS_TOKEN
 ```
 
 ### 2. Start services
@@ -64,6 +64,21 @@ flutter run -d <device>        # Mobile (Driver / Gatekeeper)
 
 ---
 
+## Gemini AI
+
+Model: `gemini-1.5-flash` — fast, capable, free-tier friendly.
+
+| Endpoint | Function |
+|---|---|
+| `POST /ai/insight` | Supply chain narrative + delay/risk/cost analysis |
+| `POST /ai/route-explain/{id}` | Plain-English SA decision explanation |
+| `POST /ai/eta-predict/{id}` | Predicted delivery datetime + confidence |
+| AI chat suggest | Smart reply suggestions in the in-app messenger |
+
+Get your free API key at [aistudio.google.com](https://aistudio.google.com).
+
+---
+
 ## Data Ingestion
 
 POST a CSV to `/api/v1/ingestion/upload` with the `source_type` query param:
@@ -74,8 +89,7 @@ POST a CSV to `/api/v1/ingestion/upload` with the `source_type` query param:
 | Ecommerce_Delivery_Analytics_New.csv | `ecommerce_analytics` | 100,000 |
 | delivery_points_rourkela.csv | `delivery_points` | 500 |
 
-Auto-detection works if `source_type` is omitted — the ingestion service
-identifies the file from its header columns.
+Auto-detection works if `source_type` is omitted.
 
 ---
 
@@ -107,22 +121,9 @@ identifies the file from its header columns.
 - **Acceptance**: Boltzmann criterion `P = e^(-ΔC/T)`
 - **Cooling**: Geometric schedule `T(k) = T₀ × α^k`
 - **Defaults**: T₀=1000, α=0.995, max_iter=10,000
-- **Result**: Typically 15-30% distance improvement over greedy
+- **Result**: Typically 15–30% distance improvement over greedy
 
 Trigger via `POST /api/v1/routes/{id}/optimize` (async Celery task).
-Poll status at `GET /api/v1/routes/{id}/optimize/status?task_id=...`
-
----
-
-## DeepSeek AI (NVIDIA API)
-
-Model: `deepseek-ai/deepseek-r1` — returns both `content` and `reasoning_content`.
-
-| Endpoint | Function |
-|---|---|
-| `POST /ai/insight` | Supply chain narrative + delay/risk/cost analysis |
-| `POST /ai/route-explain/{id}` | Plain-English SA decision explanation |
-| `POST /ai/eta-predict/{id}` | Predicted delivery datetime |
 
 ---
 
@@ -136,10 +137,13 @@ Row-level isolation — no cross-tenant data leakage possible at the query layer
 
 ## Dashboard (Flutter Web)
 
-- MongoDB Atlas-inspired dark sidebar (#161B22)
+- Dark sidebar with light mode toggle
 - Real-time metric cards (Total Shipments, In Transit, Delayed, On-Time Rate, Active Routes, Empty Runs Saved)
-- Mapbox GL **ghost route** visualization — SA-optimised path as 50% opacity teal polyline
+- Mapbox GL **ghost route** visualization — SA-optimised path as teal polyline
 - Shipment status doughnut chart (fl_chart)
+- Geofence zone manager — Odisha hub zones on interactive map
+- Driver analytics, Returns, Partners, Proof of Delivery photo viewer
+- Firebase Firestore real-time chat + Twilio VoIP calling
 - Responsive: sidebar collapses on mobile
 
 ---
@@ -147,7 +151,7 @@ Row-level isolation — no cross-tenant data leakage possible at the query layer
 ## Planned (Post-MVP)
 
 - [ ] WebSocket real-time shipment event stream
-- [ ] Mapbox GL live vehicle tracking (replace canvas placeholder)
+- [ ] Mapbox GL live vehicle tracking
 - [ ] Multi-stop delivery + return loop optimization
 - [ ] Tenant billing integration (Stripe)
 - [ ] Partner API webhook ingestion

@@ -1,9 +1,9 @@
 """
-DeepSeek-R1 via NVIDIA's hosted API.
+Google Gemini AI service — powers supply chain insights, route explanations,
+ETA predictions, and smart chat replies.
 
-Uses the OpenAI-compatible client with NVIDIA base URL.
-All calls are async via httpx + asyncio.Semaphore to respect rate limits.
-DeepSeek-R1 returns both reasoning_content (chain-of-thought) and content (answer).
+Uses the google-genai SDK (google-generativeai) via the REST API.
+All calls are async with a concurrency limiter to respect Gemini rate limits.
 """
 from __future__ import annotations
 
@@ -12,94 +12,77 @@ import json
 import re
 from datetime import datetime, timezone
 
-from openai import AsyncOpenAI
+import google.generativeai as genai
 
 from app.core.config import settings
 from app.schemas.ai_insight import ETAPrediction, InsightResponse, RouteExplanation
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _extract_json(text: str) -> dict | None:
-    """
-    Robustly extract a JSON object from an LLM response.
-    Handles:
-      - Pure JSON
-      - JSON wrapped in ```json ... ``` fences
-      - JSON embedded inside prose / markdown
-    Returns None if nothing parseable is found.
-    """
+    """Robustly extract a JSON object from an LLM response."""
     if not text:
         return None
-    # 1) Try direct parse
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    # 2) Try fenced code block
     fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if fence:
         try:
             return json.loads(fence.group(1))
         except json.JSONDecodeError:
             pass
-    # 3) Greedy first-{ to last-}
     first = text.find("{")
     last = text.rfind("}")
     if first != -1 and last != -1 and last > first:
-        candidate = text[first:last + 1]  # type: ignore[index]
         try:
-            return json.loads(candidate)
+            return json.loads(text[first:last + 1])
         except json.JSONDecodeError:
             pass
     return None
 
 
 def _strip_markdown(text: str) -> str:
-    """Remove markdown headings, code fences, and extra blank lines for plain-text display."""
+    """Remove markdown formatting for plain-text display."""
     if not text:
         return ""
-    # Drop fenced code blocks entirely
     text = re.sub(r"```[a-zA-Z]*\n.*?```", "", text, flags=re.DOTALL)
-    # Drop headings (### Foo)
     text = re.sub(r"^#{1,6}\s.*$", "", text, flags=re.MULTILINE)
-    # Collapse whitespace
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
-# Rate-limit concurrency to NVIDIA API tier
+
+# ── Gemini client setup ───────────────────────────────────────────────────────
+
+genai.configure(api_key=settings.GEMINI_API_KEY)
+
 _semaphore = asyncio.Semaphore(settings.AI_CONCURRENCY_LIMIT)
 
-_client = AsyncOpenAI(
-    api_key=settings.NVIDIA_API_KEY,
-    base_url=settings.NVIDIA_API_BASE_URL,
-)
 
-
-async def _chat(system: str, user: str) -> tuple[str, str | None]:
+async def _chat(system: str, user: str) -> str:
     """
-    Returns (content, reasoning_content).
-    reasoning_content is the chain-of-thought from DeepSeek-R1 (may be None).
+    Send a prompt to Gemini and return the text response.
+    System instruction + user message are combined as Gemini uses a single prompt.
     """
+    model = genai.GenerativeModel(
+        model_name=settings.GEMINI_MODEL,
+        system_instruction=system,
+        generation_config=genai.GenerationConfig(
+            temperature=settings.GEMINI_TEMPERATURE,
+            top_p=settings.GEMINI_TOP_P,
+            max_output_tokens=settings.GEMINI_MAX_TOKENS,
+        ),
+    )
     async with _semaphore:
-        response = await _client.chat.completions.create(
-            model=settings.DEEPSEEK_MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=settings.DEEPSEEK_TEMPERATURE,
-            top_p=settings.DEEPSEEK_TOP_P,
-            max_tokens=settings.DEEPSEEK_MAX_TOKENS,
-        )
-    choice = response.choices[0]
-    content = choice.message.content or ""
-    reasoning = getattr(choice.message, "reasoning_content", None)
-    return content, reasoning
+        response = await asyncio.to_thread(model.generate_content, user)
+    return response.text or ""
 
+
+# ── Public functions ──────────────────────────────────────────────────────────
 
 async def get_supply_chain_insight(shipment_summaries: list[dict]) -> InsightResponse:
-    """
-    Analyse a batch of shipment summaries and return structured supply chain insights.
-    """
+    """Analyse a batch of shipments and return structured supply chain insights."""
     system = (
         "You are a senior supply chain analyst for an Indian logistics platform. "
         "Analyse the shipment data and respond with ONLY a single JSON object — "
@@ -115,17 +98,16 @@ async def get_supply_chain_insight(shipment_summaries: list[dict]) -> InsightRes
     user = (
         f"Analyse these {len(shipment_summaries)} shipment records and identify "
         f"supply chain inefficiencies, delay patterns, partner risks, and cost anomalies:\n\n"
-        f"{json.dumps(shipment_summaries[:50], default=str)}"  # type: ignore[index] # cap at 50 for token budget
+        f"{json.dumps(shipment_summaries[:50], default=str)}"
     )
 
-    content, reasoning = await _chat(system, user)
-
+    content = await _chat(system, user)
     data = _extract_json(content) or {}
     narrative = data.get("narrative") or _strip_markdown(content) or "No insight available."
 
     return InsightResponse(
         narrative=narrative,
-        reasoning=reasoning,
+        reasoning=None,  # Gemini doesn't expose chain-of-thought separately
         delay_patterns=data.get("delay_patterns", []),
         partner_risks=data.get("partner_risks", []),
         cost_anomalies=data.get("cost_anomalies", []),
@@ -134,9 +116,7 @@ async def get_supply_chain_insight(shipment_summaries: list[dict]) -> InsightRes
 
 
 async def get_route_explanation(route_summary: dict) -> RouteExplanation:
-    """
-    Generate a plain-English explanation of why the SA algorithm produced this route.
-    """
+    """Generate a plain-English explanation of the SA-optimised route."""
     system = (
         "You are a logistics operations AI. Explain in plain English why the "
         "Simulated Annealing algorithm produced this specific route arrangement. "
@@ -144,23 +124,19 @@ async def get_route_explanation(route_summary: dict) -> RouteExplanation:
         "Keep your explanation under 200 words."
     )
     user = f"Route optimization result:\n{json.dumps(route_summary, default=str)}"
-
-    content, reasoning = await _chat(system, user)
+    content = await _chat(system, user)
 
     return RouteExplanation(
         route_id=route_summary.get("route_id"),
         explanation=_strip_markdown(content),
-        reasoning=reasoning,
+        reasoning=None,
         stop_count=route_summary.get("stop_count", 0),
         total_km=route_summary.get("total_distance_km"),
     )
 
 
 async def predict_eta(shipment_summary: dict) -> ETAPrediction:
-    """
-    Predict delivery ETA for a shipment based on its attributes.
-    Returns an ETAPrediction with a predicted datetime.
-    """
+    """Predict delivery ETA for a shipment based on its attributes."""
     system = (
         "You are a delivery ETA prediction model. Given shipment attributes, "
         "respond ONLY with a JSON object: "
@@ -168,8 +144,7 @@ async def predict_eta(shipment_summary: dict) -> ETAPrediction:
         f"Base your prediction on current UTC time: {datetime.now(timezone.utc).isoformat()}."
     )
     user = f"Predict ETA for this shipment:\n{json.dumps(shipment_summary, default=str)}"
-
-    content, reasoning = await _chat(system, user)
+    content = await _chat(system, user)
 
     data = _extract_json(content) or {}
     try:
@@ -182,19 +157,16 @@ async def predict_eta(shipment_summary: dict) -> ETAPrediction:
         shipment_id=shipment_summary.get("id"),
         predicted_eta=predicted_eta,
         confidence=data.get("confidence"),
-        reasoning=data.get("reasoning") or reasoning,
+        reasoning=data.get("reasoning"),
     )
 
 
 async def smart_reply(context: str, message: str) -> str:
-    """
-    Generate a contextual smart-reply for driver/customer communications.
-    """
+    """Generate a contextual smart-reply for driver/customer communications."""
     system = (
         "You are a logistics communication assistant. Generate a professional, "
         "empathetic reply to the message given the shipment context. "
         "Keep replies under 80 words."
     )
     user = f"Context:\n{context}\n\nMessage to reply to:\n{message}"
-    content, _ = await _chat(system, user)
-    return content
+    return _strip_markdown(await _chat(system, user))
