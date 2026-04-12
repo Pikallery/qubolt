@@ -55,10 +55,10 @@ class _HubViewState extends ConsumerState<HubView>
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(children: [
+            Row(children: [
               Icon(Icons.warehouse_outlined,
                   color: AppColors.primary, size: 18),
               SizedBox(width: 8),
@@ -69,7 +69,7 @@ class _HubViewState extends ConsumerState<HubView>
                       fontSize: 15)),
             ]),
             Text(hubId,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10,
                     fontFamily: 'monospace')),

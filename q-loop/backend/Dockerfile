@@ -33,7 +33,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
         "qrcode[pil]==8.0" \
         "Pillow==11.0.0" \
         "httpx==0.28.1" \
-        "openai==1.57.4" \
+        "google-generativeai==0.8.3" \
         "celery[redis]==5.4.0" \
         "redis==5.2.1" \
         "flower==2.0.1" \

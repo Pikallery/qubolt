@@ -976,27 +976,32 @@ class _EarningsTab extends ConsumerWidget {
   const _EarningsTab();
 
   static const _historicalTransactions = [
-    (date: 'Today 09:15',  desc: 'PKG-2024-0841', amount: 180.0,  isIncome: true),
-    (date: 'Today 11:30',  desc: 'PKG-2024-0842', amount: 220.0,  isIncome: true),
-    (date: 'Today 13:00',  desc: 'PKG-2024-0843', amount: 150.0,  isIncome: true),
-    (date: 'Yesterday',    desc: 'PKG-2024-0831', amount: 200.0,  isIncome: true),
-    (date: 'Yesterday',    desc: 'PKG-2024-0832', amount: 175.0,  isIncome: true),
-    (date: 'Fuel Deduction', desc: 'Route-OD-07', amount: 120.0,  isIncome: false),
-    (date: 'Mon 15 Apr',   desc: 'PKG-2024-0819', amount: 195.0,  isIncome: true),
-    (date: 'Mon 15 Apr',   desc: 'PKG-2024-0820', amount: 210.0,  isIncome: true),
+    (date: 'Today 09:15', desc: 'PKG-2024-0841', amount: 180.0, isIncome: true),
+    (date: 'Today 11:30', desc: 'PKG-2024-0842', amount: 220.0, isIncome: true),
+    (date: 'Today 13:00', desc: 'PKG-2024-0843', amount: 150.0, isIncome: true),
+    (date: 'Yesterday', desc: 'PKG-2024-0831', amount: 200.0, isIncome: true),
+    (date: 'Yesterday', desc: 'PKG-2024-0832', amount: 175.0, isIncome: true),
+    (
+      date: 'Fuel Deduction',
+      desc: 'Route-OD-07',
+      amount: 120.0,
+      isIncome: false
+    ),
+    (date: 'Mon 15 Apr', desc: 'PKG-2024-0819', amount: 195.0, isIncome: true),
+    (date: 'Mon 15 Apr', desc: 'PKG-2024-0820', amount: 210.0, isIncome: true),
   ];
 
-  static const _baseWeek  = 1130.0;
-  static const _baseToday =  550.0;
+  static const _baseWeek = 1130.0;
+  static const _baseToday = 550.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionDeliveries = ref.watch(_sessionDeliveriesProvider);
 
     // Compute session earnings
-    final sessionTotal = sessionDeliveries.fold(
-      0.0, (sum, s) => sum + _calcEarnings(s));
-    final totalWeek    = _baseWeek  + sessionTotal;
+    final sessionTotal =
+        sessionDeliveries.fold(0.0, (sum, s) => sum + _calcEarnings(s));
+    final totalWeek = _baseWeek + sessionTotal;
     final todayEarning = _baseToday + sessionTotal;
     // pending payout = historical pending (580) minus session earnings already
     // credited, floored at 0
@@ -1007,7 +1012,7 @@ class _EarningsTab extends ConsumerWidget {
     final timeStamp =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-    Widget _txRow({
+    Widget txRow({
       required String date,
       required String desc,
       required double amount,
@@ -1031,41 +1036,49 @@ class _EarningsTab extends ConsumerWidget {
         ),
         child: Row(children: [
           Container(
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isIncome ? Icons.arrow_upward : Icons.arrow_downward,
-              color: color, size: 16,
+              color: color,
+              size: 16,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(
                   child: Text(desc,
                       style: const TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 13, fontWeight: FontWeight.w500)),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
                 ),
                 if (isNew)
                   Container(
                     margin: const EdgeInsets.only(left: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
                       color: AppColors.success,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text('NEW',
-                        style: TextStyle(color: Colors.black,
-                            fontSize: 8, fontWeight: FontWeight.w800)),
+                        style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800)),
                   ),
               ]),
               Text(date,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 11)),
             ]),
           ),
           Text(
@@ -1095,20 +1108,24 @@ class _EarningsTab extends ConsumerWidget {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),
             child: Column(children: [
               const Text('This Week',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(height: 4),
               Text('₹${totalWeek.toStringAsFixed(0)}',
                   style: const TextStyle(
                       color: AppColors.primary,
-                      fontSize: 36, fontWeight: FontWeight.w800)),
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800)),
               if (sessionTotal > 0) ...[
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -1116,7 +1133,8 @@ class _EarningsTab extends ConsumerWidget {
                   child: Text(
                     '+₹${sessionTotal.toStringAsFixed(0)} from ${sessionDeliveries.length} new deliver${sessionDeliveries.length == 1 ? 'y' : 'ies'} today',
                     style: const TextStyle(
-                        color: AppColors.success, fontSize: 11,
+                        color: AppColors.success,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1124,9 +1142,8 @@ class _EarningsTab extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(children: [
                 Expanded(
-                  child: _EarningsStat(
-                      'Today', '₹${todayEarning.toStringAsFixed(0)}',
-                      AppColors.success),
+                  child: _EarningsStat('Today',
+                      '₹${todayEarning.toStringAsFixed(0)}', AppColors.success),
                 ),
                 Container(width: 1, height: 40, color: AppColors.border),
                 Expanded(
@@ -1144,14 +1161,16 @@ class _EarningsTab extends ConsumerWidget {
           const Text('Transaction History',
               style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600, fontSize: 14)),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14)),
           const SizedBox(height: 12),
 
           // New session deliveries at the top
           ...sessionDeliveries.reversed.map((s) {
             final id = s['external_id'] as String? ??
-                (s['id'] as String?)?.substring(0, 10) ?? 'PKG';
-            return _txRow(
+                (s['id'] as String?)?.substring(0, 10) ??
+                'PKG';
+            return txRow(
               date: 'Today $timeStamp',
               desc: id,
               amount: _calcEarnings(s),
@@ -1161,7 +1180,7 @@ class _EarningsTab extends ConsumerWidget {
           }),
 
           // Historical rows
-          ..._historicalTransactions.map((t) => _txRow(
+          ..._historicalTransactions.map((t) => txRow(
                 date: t.date,
                 desc: t.desc,
                 amount: t.amount,

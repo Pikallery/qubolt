@@ -55,10 +55,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _error = msg;
       });
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
         });
+      }
     }
   }
 

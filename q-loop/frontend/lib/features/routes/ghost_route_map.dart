@@ -366,11 +366,12 @@ class _GhostRouteMapState extends ConsumerState<GhostRouteMap>
     setState(() => _optimizing = true);
     // Simulate optimization delay
     await Future.delayed(const Duration(seconds: 2));
-    if (mounted)
+    if (mounted) {
       setState(() {
         _optimized = true;
         _optimizing = false;
       });
+    }
   }
 
   @override

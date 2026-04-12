@@ -80,10 +80,11 @@ class _GatekeeperViewState extends ConsumerState<GatekeeperView> {
 
     // Auto-reset after 3 seconds
     await Future.delayed(const Duration(seconds: 3));
-    if (mounted)
+    if (mounted) {
       setState(() {
         _lastResult = null;
       });
+    }
   }
 
   Map<String, dynamic>? _parseQRPayload(String raw) {
