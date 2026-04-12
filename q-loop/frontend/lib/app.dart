@@ -23,21 +23,25 @@ import 'features/geofence/geofence_screen.dart';
 import 'features/map/map_screen.dart';
 import 'features/returns/returns_screen.dart';
 import 'features/partners/partners_screen.dart';
+import 'features/intro/intro_screen.dart';
 
-const _publicRoutes = {'/login', '/signup'};
+const _publicRoutes = {'/login', '/signup', '/intro'};
 
 GoRouter createRouter(Ref ref) => GoRouter(
-      initialLocation: '/login',
+      initialLocation: '/intro',
       redirect: (context, state) {
         final auth = ref.read(authNotifierProvider);
         final isPublic = _publicRoutes.contains(state.matchedLocation);
         if (!auth.isAuthenticated && !isPublic) return '/login';
-        if (auth.isAuthenticated && isPublic) {
+        if (auth.isAuthenticated &&
+            isPublic &&
+            state.matchedLocation != '/intro') {
           return _routeForRole(auth.role);
         }
         return null;
       },
       routes: [
+        GoRoute(path: '/intro', builder: (_, __) => const IntroScreen()),
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
         GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
         GoRoute(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/animations/quantum_assembly_loader.dart';
 import '../../../core/constants/app_colors.dart';
 import '../domain/auth_provider.dart';
 
@@ -489,6 +490,15 @@ class _PhoneOtpRow extends StatelessWidget {
   }
 }
 
+VehicleType _toVehicleType(String key) {
+  switch (key) {
+    case 'bike':           return VehicleType.bike;
+    case 'three_wheeler':  return VehicleType.auto;
+    case 'minivan':        return VehicleType.minivan;
+    default:               return VehicleType.truck;
+  }
+}
+
 // ── Role-specific fields ──────────────────────────────────────────────────────
 
 class _RoleFields extends StatelessWidget {
@@ -539,7 +549,18 @@ class _RoleFields extends StatelessWidget {
           onChanged: onVehicleChanged,
           validator: (v) => v == null ? 'Vehicle type required' : null,
         ),
-        const SizedBox(height: 14),
+        if (vehicleType != null) ...[
+          const SizedBox(height: 20),
+          Center(
+            child: QuantumAssemblyLoader(
+              key: ValueKey(vehicleType),
+              vehicle: _toVehicleType(vehicleType!),
+              label: 'Configuring ${_vehicleTypes[vehicleType] ?? vehicleType}…',
+            ),
+          ),
+          const SizedBox(height: 6),
+        ] else
+          const SizedBox(height: 14),
       ]);
     }
 
