@@ -217,6 +217,48 @@ const _kDemoFleet = [
       status: 'idle',
       pos: LatLng(20.4667, 84.2333),
       speedKmh: 0),
+  FleetTruck(
+      id: 'DRV-OD-TRUCK-6634',
+      driverId: '',
+      name: 'Sanjay Mishra',
+      status: 'en_route',
+      pos: LatLng(21.2167, 84.9000),
+      speedKmh: 58),
+  FleetTruck(
+      id: 'DRV-OD-VAN-8821',
+      driverId: '',
+      name: 'Kavita Rao',
+      status: 'idle',
+      pos: LatLng(20.7071, 85.9849),
+      speedKmh: 0),
+  FleetTruck(
+      id: 'DRV-OD-BIKE-4412',
+      driverId: '',
+      name: 'Arjun Patnaik',
+      status: 'en_route',
+      pos: LatLng(19.6715, 84.9091),
+      speedKmh: 30),
+  FleetTruck(
+      id: 'DRV-OD-TRUCK-3395',
+      driverId: '',
+      name: 'Mohan Tripathi',
+      status: 'at_hub',
+      pos: LatLng(22.1168, 84.0308),
+      speedKmh: 0),
+  FleetTruck(
+      id: 'DRV-OD-VAN-2278',
+      driverId: '',
+      name: 'Sunita Dash',
+      status: 'en_route',
+      pos: LatLng(20.3167, 86.6104),
+      speedKmh: 44),
+  FleetTruck(
+      id: 'DRV-OD-BIKE-5531',
+      driverId: '',
+      name: 'Pranab Kar',
+      status: 'en_route',
+      pos: LatLng(21.6352, 86.7285),
+      speedKmh: 28),
 ];
 
 /// Dashboard ghost-route map with unoptimized→optimized toggle.

@@ -1,10 +1,12 @@
 library;
 
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
@@ -15,11 +17,17 @@ const _kTrafficHeavy = [
   [LatLng(20.45, 85.83), LatLng(20.55, 85.89)],  // NH-16 Cuttack bypass
   [LatLng(21.45, 86.88), LatLng(21.52, 86.95)],  // Balasore entry
   [LatLng(22.18, 84.80), LatLng(22.25, 84.90)],  // Rourkela industrial
+  [LatLng(20.2961, 85.8315), LatLng(20.35, 85.87)],  // Bhubaneswar city center
+  [LatLng(21.9322, 86.7285), LatLng(21.97, 86.78)],  // Baripada NH-18
+  [LatLng(19.3150, 84.7941), LatLng(19.24, 84.86)],  // Berhampur bypass
 ];
 const _kTrafficModerate = [
   [LatLng(20.28, 85.80), LatLng(20.35, 85.88)],
   [LatLng(21.40, 83.90), LatLng(21.50, 84.00)],
   [LatLng(19.82, 85.75), LatLng(19.90, 85.85)],
+  [LatLng(21.4669, 83.9717), LatLng(21.52, 84.04)],  // Sambalpur outskirts
+  [LatLng(20.8380, 85.1010), LatLng(20.89, 85.15)],  // Angul industrial
+  [LatLng(19.8106, 85.8315), LatLng(19.87, 85.88)],  // Puri coastal road
 ];
 const _kClosedRoads = [
   [LatLng(20.65, 84.45), LatLng(20.72, 84.52)],  // Flood closure
@@ -54,6 +62,9 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
+// Route mode after QUBO optimization
+enum _RouteMode { qubo, tollFree, trafficFree }
+
 class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateMixin {
   late final MapController _mapCtrl;
   late final AnimationController _pulse;
@@ -61,6 +72,13 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
   String? _hoveredToll;
   bool _optimized = false;
   bool _optimizing = false;
+  _RouteMode _routeMode = _RouteMode.qubo;
+
+  // Road-following route points fetched from Mapbox Directions
+  List<LatLng> _roadRoute = [];
+  List<LatLng> _tollFreeRoute = [];
+  List<LatLng> _trafficFreeRoute = [];
+  bool _fetchingRoute = false;
 
   @override
   void initState() {
@@ -68,15 +86,78 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
     _mapCtrl = MapController();
     _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
     _trafficFlow = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+    _fetchRoadRoutes();
   }
 
   @override
   void dispose() { _pulse.dispose(); _trafficFlow.dispose(); super.dispose(); }
 
+  Future<List<LatLng>> _fetchDirections(List<LatLng> waypoints, {bool excludeTolls = false, bool excludeMotorways = false}) async {
+    if (waypoints.length < 2) return waypoints;
+    final coords = waypoints.map((p) => '${p.longitude},${p.latitude}').join(';');
+    var url = 'https://api.mapbox.com/directions/v5/mapbox/driving/$coords'
+        '?geometries=geojson&overview=full&access_token=${ApiConstants.mapboxToken}';
+    if (excludeTolls) url += '&exclude=toll';
+    if (excludeMotorways) url += '&exclude=motorway';
+    try {
+      final res = await http.get(Uri.parse(url));
+      if (res.statusCode != 200) return waypoints;
+      final data = json.decode(res.body) as Map<String, dynamic>;
+      final routes = data['routes'] as List?;
+      if (routes == null || routes.isEmpty) return waypoints;
+      final geometry = routes[0]['geometry'] as Map<String, dynamic>;
+      final coords2 = geometry['coordinates'] as List;
+      return coords2.map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble())).toList();
+    } catch (_) {
+      return waypoints;
+    }
+  }
+
+  // Sample 6 waypoints from the full route to reduce API calls
+  static const _kSampleWaypoints = [
+    LatLng(20.2961, 85.8315),  // Bhubaneswar HQ
+    LatLng(20.4625, 85.8830),  // Cuttack
+    LatLng(21.4942, 86.9355),  // Balasore
+    LatLng(21.8553, 84.0064),  // Jharsuguda
+    LatLng(22.2270, 84.8536),  // Rourkela
+    LatLng(20.2961, 85.8315),  // Back to HQ
+  ];
+
+  Future<void> _fetchRoadRoutes() async {
+    if (_fetchingRoute) return;
+    setState(() => _fetchingRoute = true);
+    final results = await Future.wait([
+      _fetchDirections(_kSampleWaypoints),
+      _fetchDirections(_kSampleWaypoints, excludeTolls: true),
+      _fetchDirections(_kSampleWaypoints, excludeMotorways: true),
+    ]);
+    if (mounted) {
+      setState(() {
+        _roadRoute = results[0].isNotEmpty ? results[0] : _kUnoptimizedRoute;
+        _tollFreeRoute = results[1].isNotEmpty ? results[1] : _kOptimizedRoute;
+        _trafficFreeRoute = results[2].isNotEmpty ? results[2] : _kOptimizedRoute;
+        _fetchingRoute = false;
+      });
+    }
+  }
+
   Future<void> _optimize() async {
     setState(() => _optimizing = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() { _optimized = true; _optimizing = false; });
+    // Fetch real optimized road route while simulating QUBO work
+    await Future.wait([
+      Future.delayed(const Duration(seconds: 2)),
+      _fetchRoadRoutes(),
+    ]);
+    if (mounted) setState(() { _optimized = true; _optimizing = false; _routeMode = _RouteMode.qubo; });
+  }
+
+  List<LatLng> get _activeRoute {
+    if (!_optimized) return _roadRoute.isNotEmpty ? _roadRoute : _kUnoptimizedRoute;
+    switch (_routeMode) {
+      case _RouteMode.qubo:       return _roadRoute.isNotEmpty ? _roadRoute : _kOptimizedRoute;
+      case _RouteMode.tollFree:   return _tollFreeRoute.isNotEmpty ? _tollFreeRoute : _kOptimizedRoute;
+      case _RouteMode.trafficFree:return _trafficFreeRoute.isNotEmpty ? _trafficFreeRoute : _kOptimizedRoute;
+    }
   }
 
   @override
@@ -142,21 +223,29 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
                       ],
                     ),
 
-                  // ── Optimized / unoptimized ghost route ──────────────────
+                  // ── Road-following route ─────────────────────────────────
                   PolylineLayer(
                     polylines: [
                       if (_optimized)
                         Polyline(
-                          points: _kOptimizedRoute,
-                          color: AppColors.quantumAccent.withOpacity(0.15),
-                          strokeWidth: 12,
+                          points: _activeRoute,
+                          color: _routeMode == _RouteMode.tollFree
+                              ? AppColors.success.withOpacity(0.15)
+                              : _routeMode == _RouteMode.trafficFree
+                                  ? Colors.blue.withOpacity(0.15)
+                                  : AppColors.quantumAccent.withOpacity(0.15),
+                          strokeWidth: 14,
                         ),
                       Polyline(
-                        points: _optimized ? _kOptimizedRoute : _kUnoptimizedRoute,
-                        color: _optimized
-                            ? AppColors.quantumAccent.withOpacity(0.85)
-                            : Colors.orange.withOpacity(0.6),
-                        strokeWidth: _optimized ? 3.5 : 2.5,
+                        points: _activeRoute,
+                        color: !_optimized
+                            ? Colors.orange.withOpacity(0.75)
+                            : _routeMode == _RouteMode.tollFree
+                                ? AppColors.success.withOpacity(0.9)
+                                : _routeMode == _RouteMode.trafficFree
+                                    ? Colors.blue.withOpacity(0.9)
+                                    : AppColors.quantumAccent.withOpacity(0.9),
+                        strokeWidth: _optimized ? 4 : 3,
                         pattern: _optimized
                             ? const StrokePattern.solid()
                             : const StrokePattern.dotted(),
@@ -311,34 +400,48 @@ class _MapScreenState extends ConsumerState<MapScreen> with TickerProviderStateM
                     onChanged: (s) => ref.read(_mapStyleProvider.notifier).state = s,
                   ),
                   const SizedBox(width: 8),
+                  // Post-QUBO route mode buttons
+                  if (_optimized) ...[
+                    _RouteModeButton(
+                      label: 'Toll-Free',
+                      icon: Icons.money_off_outlined,
+                      color: AppColors.success,
+                      active: _routeMode == _RouteMode.tollFree,
+                      onTap: () => setState(() => _routeMode = _RouteMode.tollFree),
+                    ),
+                    const SizedBox(width: 6),
+                    _RouteModeButton(
+                      label: 'Traffic-Free',
+                      icon: Icons.directions_outlined,
+                      color: Colors.blue,
+                      active: _routeMode == _RouteMode.trafficFree,
+                      onTap: () => setState(() => _routeMode = _RouteMode.trafficFree),
+                    ),
+                    const SizedBox(width: 6),
+                    _RouteModeButton(
+                      label: 'QUBO Route',
+                      icon: Icons.auto_graph,
+                      color: AppColors.quantumAccent,
+                      active: _routeMode == _RouteMode.qubo,
+                      onTap: () => setState(() => _routeMode = _RouteMode.qubo),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   // Optimize button
-                  _optimized
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppColors.quantumAccent.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.quantumAccent.withOpacity(0.4)),
-                          ),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.check_circle_outline, color: AppColors.quantumAccent, size: 14),
-                            SizedBox(width: 5),
-                            Text('QUBO Active', style: TextStyle(color: AppColors.quantumAccent, fontSize: 11, fontWeight: FontWeight.w700)),
-                          ]),
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: _optimizing ? null : _optimize,
-                          icon: _optimizing
-                              ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                              : const Icon(Icons.auto_graph, size: 14),
-                          label: Text(_optimizing ? 'Optimizing…' : 'Run QUBO'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.quantumAccent,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-                          ),
-                        ),
+                  if (!_optimized)
+                    ElevatedButton.icon(
+                      onPressed: _optimizing ? null : _optimize,
+                      icon: _optimizing
+                          ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                          : const Icon(Icons.auto_graph, size: 14),
+                      label: Text(_optimizing ? 'Optimizing…' : 'Run QUBO'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.quantumAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
                 ]),
               ),
             ),
@@ -584,5 +687,35 @@ class _StatItem extends StatelessWidget {
   }
 }
 
-// ignore: unused_element
-double _unused = math.pi; // keep math import used
+class _RouteModeButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool active;
+  final VoidCallback onTap;
+  const _RouteModeButton({required this.label, required this.icon, required this.color, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? color.withOpacity(0.2) : const Color(0xFF161B22),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: active ? color.withOpacity(0.7) : const Color(0xFF30363D)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: active ? color : const Color(0xFF8B949E), size: 13),
+          const SizedBox(width: 5),
+          Text(label, style: TextStyle(color: active ? color : const Color(0xFF8B949E), fontSize: 11, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+  }
+}
+
+// keep math import used
+double _unused = math.pi; // ignore: unused_element

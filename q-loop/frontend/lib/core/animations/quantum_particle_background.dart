@@ -24,13 +24,13 @@ class _QuantumParticleBgState extends State<QuantumParticleBackground> with Sing
 
   void _initParticles(Size size) {
     _size = size;
-    _particles = List.generate(60, (_) => _Particle(
+    _particles = List.generate(90, (_) => _Particle(
       x: _rand.nextDouble() * size.width,
       y: _rand.nextDouble() * size.height,
-      vx: (_rand.nextDouble() - 0.5) * 0.3,
-      vy: (_rand.nextDouble() - 0.5) * 0.3,
-      radius: _rand.nextDouble() * 2.5 + 0.5,
-      opacity: _rand.nextDouble() * 0.5 + 0.1,
+      vx: (_rand.nextDouble() - 0.5) * 0.5,
+      vy: (_rand.nextDouble() - 0.5) * 0.5,
+      radius: _rand.nextDouble() * 3.5 + 1.0,
+      opacity: _rand.nextDouble() * 0.6 + 0.25,
     ));
   }
 
@@ -106,21 +106,21 @@ class _ParticlePainter extends CustomPainter {
     for (final p in particles) {
       final paint = Paint()
         ..color = AppColors.quantumAccent.withOpacity(p.opacity)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
       canvas.drawCircle(Offset(p.x, p.y), p.radius, paint);
       // Inner bright dot
-      canvas.drawCircle(Offset(p.x, p.y), p.radius * 0.4,
-        Paint()..color = AppColors.quantumAccent.withOpacity(p.opacity * 1.5));
+      canvas.drawCircle(Offset(p.x, p.y), p.radius * 0.5,
+        Paint()..color = AppColors.quantumAccent.withOpacity(p.opacity * 1.8));
     }
-    // Draw faint connection lines between nearby particles
-    final linePaint = Paint()..strokeWidth = 0.3;
+    // Draw connection lines between nearby particles
+    final linePaint = Paint()..strokeWidth = 0.6;
     for (int i = 0; i < particles.length; i++) {
       for (int j = i+1; j < particles.length; j++) {
         final dx = particles[i].x - particles[j].x;
         final dy = particles[i].y - particles[j].y;
         final dist = math.sqrt(dx*dx + dy*dy);
-        if (dist < 80) {
-          linePaint.color = AppColors.quantumAccent.withOpacity(0.08 * (1 - dist/80));
+        if (dist < 120) {
+          linePaint.color = AppColors.quantumAccent.withOpacity(0.18 * (1 - dist/120));
           canvas.drawLine(Offset(particles[i].x, particles[i].y), Offset(particles[j].x, particles[j].y), linePaint);
         }
       }

@@ -267,15 +267,26 @@ class _TopBar extends StatelessWidget {
                       fontWeight: FontWeight.w600)),
             ]),
           ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: Icon(Icons.settings_outlined, color: AppColors.textSub(context), size: 20),
+            onPressed: () => context.go('/settings'),
+            tooltip: 'Settings',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
           const SizedBox(width: 12),
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.primary,
-            child: Text('Q',
-                style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+          GestureDetector(
+            onTap: () => context.go('/settings'),
+            child: const CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.primary,
+              child: Text('Q',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13)),
+            ),
           ),
         ],
       ),

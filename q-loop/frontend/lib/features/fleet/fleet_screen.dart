@@ -356,7 +356,29 @@ class _FleetStat extends StatelessWidget {
 
 // ── Truck card ───────────────────────────────────────────────────────────────
 
-class _TruckCard extends StatelessWidget {
+// Deterministic cargo + destination + ETA from truck id hashCode
+final _kCargos = [
+  'Electronics (120kg)',
+  'FMCG (85kg)',
+  'Pharmaceuticals (40kg)',
+  'Auto Parts (200kg)',
+  'Textiles (150kg)',
+];
+
+final _kDestinations = [
+  'Bhubaneswar HQ',
+  'Cuttack Central',
+  'Rourkela North',
+  'Sambalpur Depot',
+  'Berhampur South',
+  'Balasore East',
+  'Baripada Hub',
+  'Angul Hub',
+  'Puri Coastal',
+  'Koraput Tribal',
+];
+
+class _TruckCard extends StatefulWidget {
   const _TruckCard({
     required this.truck,
     required this.isSelected,
@@ -367,87 +389,35 @@ class _TruckCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final statusC = _statusColor(truck.status);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.08) : AppColors.cardBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: isSelected ? AppColors.primary.withOpacity(0.4) : AppColors.border),
-        ),
-        child: Row(children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: statusC.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.local_shipping, color: statusC, size: 16),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(truck.id,
-                    style: TextStyle(
-                        color: AppColors.textMain(context),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        fontFamily: 'monospace')),
-                const SizedBox(height: 2),
-                Text(truck.name,
-                    style: TextStyle(color: AppColors.textSub(context), fontSize: 11)),
-                Text('${truck.speedKmh.toStringAsFixed(0)} km/h',
-                    style: TextStyle(color: AppColors.labelText(context), fontSize: 10)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusC.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                    truck.status.replaceAll('_', ' ').toUpperCase(),
-                    style: TextStyle(
-                        color: statusC, fontSize: 8, fontWeight: FontWeight.w700)),
-              ),
-              const SizedBox(height: 6),
-              if (truck.driverId.isNotEmpty)
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        recipientId: truck.driverId,
-                        recipientName: truck.name,
-                        recipientRole: 'driver',
-                        recipientCustomId: truck.id,
-                      ),
-                    ));
-                  },
-                  borderRadius: BorderRadius.circular(4),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.chat_bubble_outline,
-                        color: AppColors.primary, size: 16),
-                  ),
-                ),
-            ],
-          ),
-        ]),
-      ),
-    );
+  State<_TruckCard> createState() => _TruckCardState();
+}
+
+class _TruckCardState extends State<_TruckCard> {
+  bool _hovered = false;
+
+  String get _vehicleType {
+    final id = widget.truck.id.toUpperCase();
+    if (id.contains('TRUCK')) return 'TRUCK';
+    if (id.contains('VAN')) return 'VAN';
+    if (id.contains('BIKE')) return 'BIKE';
+    return 'VEHICLE';
+  }
+
+  String get _cargo {
+    final idx = widget.truck.id.hashCode.abs() % _kCargos.length;
+    return _kCargos[idx];
+  }
+
+  String get _destination {
+    final idx = (widget.truck.id.hashCode.abs() ~/ 7) % _kDestinations.length;
+    return _kDestinations[idx];
+  }
+
+  int get _etaMin {
+    final speed = widget.truck.speedKmh;
+    if (speed <= 0) return 0;
+    final base = 20 + (widget.truck.id.hashCode.abs() % 160);
+    return base;
   }
 
   Color _statusColor(String status) {
@@ -459,6 +429,245 @@ class _TruckCard extends StatelessWidget {
       default:
         return AppColors.textSecondary;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusC = _statusColor(widget.truck.status);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          GestureDetector(
+            onTap: widget.onTap,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? AppColors.primary.withOpacity(0.08)
+                    : AppColors.cardBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: widget.isSelected
+                        ? AppColors.primary.withOpacity(0.4)
+                        : AppColors.border),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: statusC.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.local_shipping, color: statusC, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.truck.id,
+                          style: TextStyle(
+                              color: AppColors.textMain(context),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              fontFamily: 'monospace')),
+                      const SizedBox(height: 2),
+                      Text(widget.truck.name,
+                          style:
+                              TextStyle(color: AppColors.textSub(context), fontSize: 11)),
+                      Text('${widget.truck.speedKmh.toStringAsFixed(0)} km/h',
+                          style: TextStyle(
+                              color: AppColors.labelText(context), fontSize: 10)),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusC.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                          widget.truck.status.replaceAll('_', ' ').toUpperCase(),
+                          style: TextStyle(
+                              color: statusC,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(height: 6),
+                    if (widget.truck.driverId.isNotEmpty)
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              recipientId: widget.truck.driverId,
+                              recipientName: widget.truck.name,
+                              recipientRole: 'driver',
+                              recipientCustomId: widget.truck.id,
+                            ),
+                          ));
+                        },
+                        borderRadius: BorderRadius.circular(4),
+                        child: const Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Icon(Icons.chat_bubble_outline,
+                              color: AppColors.primary, size: 16),
+                        ),
+                      ),
+                  ],
+                ),
+              ]),
+            ),
+          ),
+          // Hover detail panel — positioned to the right of the card
+          if (_hovered)
+            Positioned(
+              top: 0,
+              left: 296, // card width is ~296, show just outside
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 240,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.sidebar(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.35)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 16,
+                        offset: const Offset(4, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header
+                      Row(children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(_vehicleType,
+                              style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _statusColor(widget.truck.status),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.truck.status.replaceAll('_', ' '),
+                          style: TextStyle(
+                              color: _statusColor(widget.truck.status),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ]),
+                      const SizedBox(height: 8),
+                      Text(widget.truck.name,
+                          style: TextStyle(
+                              color: AppColors.textMain(context),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13)),
+                      Text(widget.truck.id,
+                          style: TextStyle(
+                              color: AppColors.labelText(context),
+                              fontSize: 10,
+                              fontFamily: 'monospace')),
+                      const SizedBox(height: 10),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 8),
+                      _DetailRow(Icons.speed,
+                          '${widget.truck.speedKmh.toStringAsFixed(0)} km/h'),
+                      _DetailRow(Icons.location_on_outlined,
+                          '${widget.truck.pos.latitude.toStringAsFixed(4)}, ${widget.truck.pos.longitude.toStringAsFixed(4)}'),
+                      _DetailRow(Icons.inventory_2_outlined, _cargo),
+                      _DetailRow(Icons.flag_outlined, _destination),
+                      if (widget.truck.speedKmh > 0)
+                        _DetailRow(Icons.access_time_outlined,
+                            'ETA: $_etaMin min'),
+                      const SizedBox(height: 10),
+                      // Message Driver button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => ChatScreen(
+                                recipientId: widget.truck.driverId,
+                                recipientName: widget.truck.name,
+                                recipientRole: 'driver',
+                                recipientCustomId: widget.truck.id,
+                              ),
+                            ));
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline, size: 14),
+                          label: const Text('Message Driver',
+                              style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow(this.icon, this.text);
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(children: [
+        Icon(icon, size: 12, color: AppColors.labelText(context)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(text,
+              style:
+                  TextStyle(color: AppColors.textSub(context), fontSize: 11)),
+        ),
+      ]),
+    );
   }
 }
 

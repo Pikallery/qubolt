@@ -140,7 +140,7 @@ async def check_zone(
 
 
 @router.post("/seed-odisha", response_model=list[GeoZoneRead], status_code=status.HTTP_201_CREATED,
-             dependencies=[require_role("admin", "superadmin")])
+             dependencies=[require_role("admin", "superadmin", "manager")])
 async def seed_odisha_zones(
     tenant: CurrentTenant,
     db: DBSession,

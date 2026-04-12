@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -357,6 +358,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
   List<Map<String, dynamic>> _shipments = [];
   bool _loading = true;
   String? _error;
+  final _acceptedOrders = <String>{};
 
   @override
   void initState() {
@@ -465,13 +467,28 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _shipments.length,
-              itemBuilder: (_, i) => _ShipmentCard(
-                shipment: _shipments[i],
-                onShowQR: () => _showQR(_shipments[i]['id']),
-                onMarkDelivered: () => _markDelivered(_shipments[i]['id']),
-                onNavigate: () => _launchNavigation(_shipments[i]),
-                onPhoto: () => _captureDeliveryPhoto(_shipments[i]),
-              ),
+              itemBuilder: (_, i) {
+                final s = _shipments[i];
+                final id = s['id'] as String? ?? '';
+                final auth = ref.read(authNotifierProvider);
+                final driverId =
+                    'DRV-OD-TRUCK-${(auth.userId ?? '').hashCode.abs() % 9000 + 1000}';
+                final isAccepted = _acceptedOrders.contains(id);
+                final status = s['status'] as String? ?? 'pending';
+                final isPending =
+                    status == 'pending' || status == 'assigned';
+                return _ShipmentCard(
+                  shipment: s,
+                  isAccepted: isAccepted,
+                  limitReached: isPending && !isAccepted && _limitReached(driverId),
+                  onShowQR: () => _showQR(id),
+                  onMarkDelivered: () => _markDelivered(id),
+                  onNavigate: () => _launchNavigation(s),
+                  onPhoto: () => _captureDeliveryPhoto(s),
+                  onAccept: isPending && !isAccepted ? () => _acceptOrder(id) : null,
+                  onCancel: isAccepted ? () => _cancelOrder(id) : null,
+                );
+              },
             ),
           ),
         ],
@@ -494,6 +511,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
           shipment,
         ];
       }
+      setState(() => _acceptedOrders.remove(id));
       _load();
     } catch (e) {
       if (mounted) {
@@ -501,6 +519,50 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
             content: Text('Error: $e'), backgroundColor: AppColors.error));
       }
     }
+  }
+
+  Future<void> _acceptOrder(String id) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.patch('/api/v1/shipments/$id', data: {'status': 'in_transit'});
+      setState(() => _acceptedOrders.add(id));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Accept failed: $e'),
+            backgroundColor: AppColors.error));
+      }
+    }
+  }
+
+  Future<void> _cancelOrder(String id) async {
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.patch('/api/v1/shipments/$id', data: {'status': 'pending'});
+      setState(() => _acceptedOrders.remove(id));
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Cancel failed: $e'),
+            backgroundColor: AppColors.error));
+      }
+    }
+  }
+
+  /// Returns true if this driver has reached the order limit for their vehicle type.
+  bool _limitReached(String driverId) {
+    final id = driverId.toUpperCase();
+    final acceptedCount = _acceptedOrders.length;
+    if (id.contains('TRUCK') || id.contains('VAN')) {
+      // max 1 long-distance accepted at a time
+      return acceptedCount >= 1;
+    }
+    if (id.contains('BIKE')) {
+      // max 2 long-distance
+      return acceptedCount >= 2;
+    }
+    return false;
   }
 }
 
@@ -530,12 +592,20 @@ class _ShipmentCard extends StatelessWidget {
     required this.onMarkDelivered,
     this.onNavigate,
     this.onPhoto,
+    this.onAccept,
+    this.onCancel,
+    this.isAccepted = false,
+    this.limitReached = false,
   });
   final Map<String, dynamic> shipment;
   final VoidCallback onShowQR;
   final VoidCallback onMarkDelivered;
   final VoidCallback? onNavigate;
   final VoidCallback? onPhoto;
+  final VoidCallback? onAccept;
+  final VoidCallback? onCancel;
+  final bool isAccepted;
+  final bool limitReached;
 
   String _estimateEarnings(Map<String, dynamic> s) {
     final dist = (s['distance_km'] as num?)?.toDouble() ?? 15.0;
@@ -643,6 +713,77 @@ class _ShipmentCard extends StatelessWidget {
             ),
           ]),
         ),
+        // Accept / Cancel / Limit row
+        if (onAccept != null || onCancel != null || limitReached || isAccepted) ...[
+          const SizedBox(height: 8),
+          Row(children: [
+            if (limitReached)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.warning.withOpacity(0.4)),
+                ),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.block, size: 12, color: AppColors.warning),
+                  SizedBox(width: 5),
+                  Text('Order Limit Reached',
+                      style: TextStyle(
+                          color: AppColors.warning,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            if (onAccept != null && !limitReached)
+              ElevatedButton.icon(
+                onPressed: onAccept,
+                icon: const Icon(Icons.check_circle_outline, size: 14),
+                label: const Text('Accept', style: TextStyle(fontSize: 11)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
+                ),
+              ),
+            if (onCancel != null) ...[
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.cancel_outlined, size: 14),
+                label: const Text('Cancel', style: TextStyle(fontSize: 11)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: BorderSide(color: AppColors.error.withOpacity(0.5)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6)),
+                ),
+              ),
+            ],
+            if (isAccepted && onCancel == null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.check_circle, size: 12, color: AppColors.success),
+                  SizedBox(width: 4),
+                  Text('Accepted',
+                      style: TextStyle(
+                          color: AppColors.success,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ],
+          ]),
+        ],
+        const SizedBox(height: 4),
         Row(children: [
           _StatusChip(status),
           const Spacer(),
@@ -704,6 +845,21 @@ class _ShipmentCard extends StatelessWidget {
 
 // ── Tab 2: Route Map ──────────────────────────────────────────────────────────
 
+// Region → LatLng lookup
+const _regionCoords = {
+  'Bhubaneswar': LatLng(20.2961, 85.8315),
+  'Cuttack': LatLng(20.4625, 85.8830),
+  'Rourkela': LatLng(22.2270, 84.8536),
+  'Sambalpur': LatLng(21.4669, 83.9717),
+  'Berhampur': LatLng(19.3150, 84.7941),
+  'Balasore': LatLng(21.4942, 86.9355),
+  'Puri': LatLng(19.8106, 85.8315),
+  'Angul': LatLng(20.8380, 85.1010),
+  'Koraput': LatLng(18.8135, 82.7123),
+};
+
+const _kHubOrigin = LatLng(20.2961, 85.8315); // Bhubaneswar HQ
+
 class _RouteMapTab extends ConsumerStatefulWidget {
   const _RouteMapTab();
 
@@ -712,22 +868,20 @@ class _RouteMapTab extends ConsumerStatefulWidget {
 }
 
 class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
-  // Today's route stops for this driver
-  static const _stops = [
-    LatLng(20.2961, 85.8315),
-    LatLng(20.4625, 85.8830),
-    LatLng(20.5012, 86.4211),
-    LatLng(20.3167, 86.6104),
-    LatLng(19.8106, 85.8315),
-  ];
-
   Timer? _locationTimer;
   bool _locationSharing = false;
+  bool _tollFree = false;
+  String? _selectedOrderId;
+
+  // accepted orders passed down — we watch the parent's set via a provider
+  // For now we read from the deliveries provider
+  List<Map<String, dynamic>> _acceptedShipments = [];
 
   @override
   void initState() {
     super.initState();
     _startLocationSharing();
+    _loadAccepted();
   }
 
   @override
@@ -736,8 +890,28 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
     super.dispose();
   }
 
+  Future<void> _loadAccepted() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/shipments',
+          queryParameters: {'status': 'in_transit', 'page_size': 20});
+      if (mounted) {
+        setState(() {
+          _acceptedShipments =
+              List<Map<String, dynamic>>.from(res.data['items'] ?? []);
+          if (_acceptedShipments.isNotEmpty &&
+              (_selectedOrderId == null ||
+                  !_acceptedShipments
+                      .any((s) => s['id'] == _selectedOrderId))) {
+            _selectedOrderId =
+                _acceptedShipments.first['id'] as String?;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _postLocation() async {
-    // Use stop[1] (Cuttack) as simulated current driver position
     const lat = 20.4625;
     const lon = 85.8830;
     try {
@@ -755,43 +929,93 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
   }
 
   void _startLocationSharing() {
-    _postLocation(); // post immediately
+    _postLocation();
     _locationTimer =
         Timer.periodic(const Duration(seconds: 30), (_) => _postLocation());
   }
 
+  /// Build the route polyline from hub to destination, with optional toll-free
+  /// waypoint detour.
+  List<LatLng> _buildRoute(LatLng dest) {
+    if (_tollFree) {
+      // Add a slight inland detour to simulate toll bypass
+      final midLat = (_kHubOrigin.latitude + dest.latitude) / 2 - 0.15;
+      final midLon = (_kHubOrigin.longitude + dest.longitude) / 2 - 0.20;
+      return [_kHubOrigin, LatLng(midLat, midLon), dest];
+    }
+    final midLat = (_kHubOrigin.latitude + dest.latitude) / 2;
+    final midLon = (_kHubOrigin.longitude + dest.longitude) / 2;
+    return [_kHubOrigin, LatLng(midLat, midLon), dest];
+  }
+
+  /// Euclidean-degree approximation → km (sufficient for display at ~20°N)
+  double _distKm(LatLng a, LatLng b) {
+    final dlat = (b.latitude - a.latitude).abs();
+    final dlon = (b.longitude - a.longitude).abs();
+    // 1 deg lat ≈ 111 km, 1 deg lon ≈ 88 km at ~20°N
+    return math.sqrt((dlat * 111) * (dlat * 111) + (dlon * 88) * (dlon * 88));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic>? selected = _acceptedShipments.isEmpty
+        ? null
+        : _acceptedShipments.firstWhere(
+            (s) => s['id'] == _selectedOrderId,
+            orElse: () => _acceptedShipments.first,
+          );
+
+    final region = selected?['region'] as String? ?? 'Cuttack';
+    final dest = _regionCoords[region] ?? const LatLng(20.4625, 85.8830);
+    final route = _buildRoute(dest);
+    final distKm = _distKm(_kHubOrigin, dest);
+    final etaMin = (distKm / 50 * 60).round(); // assume 50 km/h avg
+
+    // Map center between hub and dest
+    final centerLat = (_kHubOrigin.latitude + dest.latitude) / 2;
+    final centerLon = (_kHubOrigin.longitude + dest.longitude) / 2;
+
     return Column(
       children: [
-        // Stats strip
+        // ── Top stats strip ────────────────────────────────────────────────
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           color: AppColors.sidebarBg,
           child: Row(children: [
-            const Expanded(
-                child: _RouteStatBox('Distance', '87.4 km', Icons.straighten)),
-            const Expanded(
-                child: _RouteStatBox('Stops', '5', Icons.place_outlined)),
-            const Expanded(
-                child: _RouteStatBox('ETA', '14:30', Icons.access_time)),
+            Expanded(
+                child: _RouteStatBox(
+                    'Distance',
+                    '${distKm.toStringAsFixed(1)} km',
+                    Icons.straighten)),
+            Expanded(
+                child: _RouteStatBox(
+                    'ETA', '$etaMin min', Icons.access_time)),
+            Expanded(
+                child: _RouteStatBox(
+                    'Orders',
+                    '${_acceptedShipments.length}',
+                    Icons.local_shipping_outlined)),
             // Location sharing indicator
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color:
-                    (_locationSharing ? AppColors.success : AppColors.textMuted)
-                        .withOpacity(0.12),
+                color: (_locationSharing
+                        ? AppColors.success
+                        : AppColors.textMuted)
+                    .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: (_locationSharing
                             ? AppColors.success
                             : AppColors.textMuted)
-                        .withOpacity(0.3)),
+                        .withValues(alpha: 0.3)),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(
-                  _locationSharing ? Icons.location_on : Icons.location_off,
+                  _locationSharing
+                      ? Icons.location_on
+                      : Icons.location_off,
                   size: 12,
                   color: _locationSharing
                       ? AppColors.success
@@ -812,18 +1036,95 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
           ]),
         ),
 
-        // Map
+        // ── Order selector + Toll-free toggle ─────────────────────────────
+        Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: AppColors.cardBg,
+          child: Row(children: [
+            const Icon(Icons.route, color: AppColors.primary, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _acceptedShipments.isEmpty
+                  ? Text('No accepted orders — accept orders in Deliveries tab',
+                      style: TextStyle(
+                          color: AppColors.textMuted, fontSize: 11))
+                  : DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedOrderId ??
+                            _acceptedShipments.first['id'] as String?,
+                        dropdownColor: AppColors.cardBg,
+                        style: const TextStyle(
+                            color: AppColors.textPrimary, fontSize: 12),
+                        isExpanded: true,
+                        items: _acceptedShipments.map((s) {
+                          final label = s['external_id'] as String? ??
+                              (s['id'] as String?)
+                                  ?.substring(0, 10) ??
+                              '—';
+                          final reg =
+                              s['region'] as String? ?? 'Unknown';
+                          return DropdownMenuItem<String>(
+                            value: s['id'] as String?,
+                            child: Text('$label → $reg',
+                                overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedOrderId = v),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              const Text('Toll-Free',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 11)),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => setState(() => _tollFree = !_tollFree),
+                child: Container(
+                  width: 36,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: _tollFree
+                        ? AppColors.primary
+                        : AppColors.border,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Align(
+                    alignment: _tollFree
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      margin:
+                          const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+
+        // ── Map ────────────────────────────────────────────────────────────
         Expanded(
           child: Container(
             color: const Color(0xFF0A1628),
             child: Stack(
               children: [
                 FlutterMap(
-                  options: const MapOptions(
-                    initialCenter: LatLng(20.3500, 85.9000),
-                    initialZoom: 8.5,
+                  options: MapOptions(
+                    initialCenter: LatLng(centerLat, centerLon),
+                    initialZoom: 7.5,
                     interactionOptions:
-                        InteractionOptions(flags: InteractiveFlag.all),
+                        const InteractionOptions(
+                            flags: InteractiveFlag.all),
                   ),
                   children: [
                     TileLayer(
@@ -836,51 +1137,73 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                     PolylineLayer(
                       polylines: [
                         Polyline(
-                          points: _stops,
-                          color: AppColors.ghostRouteSolid,
-                          strokeWidth: 3,
+                          points: route,
+                          color: _tollFree
+                              ? AppColors.success
+                              : AppColors.ghostRouteSolid,
+                          strokeWidth: 3.5,
+                          pattern: _tollFree
+                              ? const StrokePattern.solid()
+                              : const StrokePattern.solid(),
                         ),
                       ],
                     ),
                     MarkerLayer(
                       markers: [
-                        ..._stops.asMap().entries.map((e) => Marker(
-                              point: e.value,
-                              width: 28,
-                              height: 28,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: e.key == 0
-                                      ? AppColors.primary
-                                      : AppColors.stopMarker,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: Colors.black, width: 1.5),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    e.key == 0 ? 'H' : '${e.key}',
-                                    style: const TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800),
-                                  ),
-                                ),
-                              ),
-                            )),
-                        // Driver position (stop 2 for demo)
+                        // Hub marker
                         Marker(
-                          point: _stops[1],
-                          width: 38,
-                          height: 38,
+                          point: _kHubOrigin,
+                          width: 34,
+                          height: 34,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.warehouse,
+                                color: Colors.white, size: 16),
+                          ),
+                        ),
+                        // Destination marker
+                        Marker(
+                          point: dest,
+                          width: 34,
+                          height: 34,
                           child: Container(
                             decoration: BoxDecoration(
                               color: AppColors.accent,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              border: Border.all(
+                                  color: Colors.white, width: 2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.accent.withOpacity(0.6),
+                                  color: AppColors.accent
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 10,
+                                )
+                              ],
+                            ),
+                            child: const Icon(Icons.flag,
+                                color: Colors.white, size: 16),
+                          ),
+                        ),
+                        // Driver (hub position for demo)
+                        Marker(
+                          point: _kHubOrigin,
+                          width: 40,
+                          height: 40,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.success,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.success
+                                      .withValues(alpha: 0.6),
                                   blurRadius: 12,
                                 )
                               ],
@@ -893,6 +1216,61 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                     ),
                   ],
                 ),
+
+                // Distance / ETA info card at top of map
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.route,
+                          color: AppColors.primary, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Bhubaneswar HQ → $region',
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${distKm.toStringAsFixed(1)} km  •  $etaMin min',
+                        style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11),
+                      ),
+                      if (_tollFree) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.success
+                                .withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text('TOLL-FREE',
+                              style: TextStyle(
+                                  color: AppColors.success,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w800)),
+                        ),
+                      ],
+                    ]),
+                  ),
+                ),
+
                 // Legend
                 Positioned(
                   bottom: 16,
@@ -900,7 +1278,7 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBg.withOpacity(0.92),
+                      color: AppColors.cardBg.withValues(alpha: 0.92),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.border),
                     ),
@@ -909,14 +1287,16 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _MapLegend(
-                            color: AppColors.primary, label: 'Hub (Start)'),
+                            color: AppColors.primary,
+                            label: 'Hub (Start)'),
                         SizedBox(height: 3),
                         _MapLegend(
-                            color: AppColors.stopMarker,
-                            label: 'Delivery Stop'),
+                            color: AppColors.accent,
+                            label: 'Destination'),
                         SizedBox(height: 3),
                         _MapLegend(
-                            color: AppColors.accent, label: 'Your Location'),
+                            color: AppColors.success,
+                            label: 'Your Location'),
                       ],
                     ),
                   ),
