@@ -115,6 +115,7 @@ LoginTenant = Annotated[Tenant, Depends(get_tenant_for_login)]
 ROLE_HIERARCHY = {
     "superadmin": 100,
     "admin": 80,
+    "manager": 70,
     "operator": 60,
     "gatekeeper": 40,
     "driver": 40,

@@ -40,18 +40,8 @@ async def get_me(current_user: CurrentUser):
     return UserRead.model_validate(current_user)
 
 
-@router.get("/{user_id}", response_model=UserRead, dependencies=[require_min_role("admin")])
-async def get_user(user_id: uuid.UUID, tenant: CurrentTenant, db: DBSession):
-    result = await db.execute(
-        select(User).where(User.id == user_id, User.tenant_id == tenant.id)
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return UserRead.model_validate(user)
-
-
-@router.get("/drivers", response_model=list[UserRead])
+@router.get("/drivers", response_model=list[UserRead],
+            dependencies=[require_min_role("manager")])
 async def list_drivers(
     tenant: CurrentTenant,
     db: DBSession,
@@ -64,6 +54,17 @@ async def list_drivers(
         .order_by(User.full_name)
     )
     return [UserRead.model_validate(u) for u in result.scalars().all()]
+
+
+@router.get("/{user_id}", response_model=UserRead, dependencies=[require_min_role("admin")])
+async def get_user(user_id: uuid.UUID, tenant: CurrentTenant, db: DBSession):
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.tenant_id == tenant.id)
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserRead.model_validate(user)
 
 
 @router.patch("/{user_id}", response_model=UserRead, dependencies=[require_min_role("admin")])
