@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -750,25 +751,38 @@ class _ShipmentsTabState extends ConsumerState<_ShipmentsTab> {
   List<Map<String, dynamic>> _shipments = [];
   bool _loading = true;
   String? _error;
-  String _filter = 'pending';
+  String _filter = 'in_transit'; // default to transit — hub's primary view
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Auto-refresh every 20 s so newly-arrived drivers appear without manual pull
+    _refreshTimer =
+        Timer.periodic(const Duration(seconds: 20), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final dio = ref.read(dioProvider);
       final res = await dio.get('/shipments',
           queryParameters: {'status': _filter, 'page_size': 30});
+      if (!mounted) return;
       setState(() {
         _shipments = List<Map<String, dynamic>>.from(res.data['items'] ?? []);
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -869,6 +883,27 @@ class _HubShipmentCard extends ConsumerStatefulWidget {
 
 class _HubShipmentCardState extends ConsumerState<_HubShipmentCard> {
   bool _confirming = false;
+  bool _driverArrived = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final status = widget.shipment['status'] as String? ?? '';
+    if (status == 'in_transit') _checkDriverArrived();
+  }
+
+  Future<void> _checkDriverArrived() async {
+    final id = widget.shipment['id'] as String? ?? '';
+    if (id.isEmpty) return;
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/shipments/$id/events');
+      final events = List<Map<String, dynamic>>.from(res.data as List? ?? []);
+      final arrived =
+          events.any((e) => e['event_type'] == 'driver_arrived');
+      if (mounted) setState(() => _driverArrived = arrived);
+    } catch (_) {}
+  }
 
   Future<void> _confirmArrival() async {
     final id = widget.shipment['id'] as String? ?? '';
@@ -957,15 +992,41 @@ class _HubShipmentCardState extends ConsumerState<_HubShipmentCard> {
             ),
           ]),
           if (isInTransit) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
+            // Driver arrived badge
+            if (_driverArrived)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.4)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.directions_run,
+                      size: 13, color: AppColors.success),
+                  SizedBox(width: 6),
+                  Text('Driver has arrived at this hub — ready for handoff',
+                      style: TextStyle(
+                          color: AppColors.success,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ),
             SizedBox(
               width: double.infinity,
               height: 34,
               child: ElevatedButton.icon(
                 onPressed: _confirming ? null : _confirmArrival,
                 icon: _confirming
-                    ? const SizedBox(width: 12, height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.black))
                     : const Icon(Icons.check_circle_outline, size: 15),
                 label: Text(_confirming ? 'Confirming…' : 'Confirm Arrival'),
                 style: ElevatedButton.styleFrom(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -7,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart'
@@ -485,7 +487,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
                   isAccepted: isAccepted,
                   limitReached: isPending && !isAccepted && _limitReached(driverId),
                   onShowQR: () => _showQR(id),
-                  onMarkDelivered: () => _markDelivered(id),
+                  onMarkDelivered: () => _markArrivedAtHub(id),
                   onNavigate: () => _launchNavigation(s),
                   onPhoto: () => _captureDeliveryPhoto(s),
                   onAccept: isPending && !isAccepted ? () => _acceptOrder(id) : null,
@@ -499,10 +501,15 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
     );
   }
 
-  Future<void> _markDelivered(String id) async {
+  Future<void> _markArrivedAtHub(String id) async {
     try {
       final dio = ref.read(dioProvider);
-      await dio.patch(ApiConstants.shipment(id), data: {'status': 'in_transit'});
+      // Post a driver_arrived event — hub operator sees it in their transit tab
+      // and clicks "Confirm Arrival" to finalise as delivered.
+      await dio.post(ApiConstants.shipmentEvents(id), data: {
+        'event_type': 'driver_arrived',
+        'note': 'Driver has arrived at hub with package',
+      });
       // Add to session earnings so the Earnings tab updates live
       final shipment = _shipments.firstWhere(
         (s) => s['id'] == id,
@@ -514,7 +521,12 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
           shipment,
         ];
       }
-      setState(() => _acceptedOrders.remove(id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Hub notified — awaiting confirmation'),
+          backgroundColor: AppColors.success,
+        ));
+      }
       _load();
     } catch (e) {
       if (mounted) {
@@ -670,6 +682,36 @@ class _ShipmentCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
+        // Hub drop-off destination banner
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(6),
+            border:
+                Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+          ),
+          child: Row(children: [
+            const Icon(Icons.warehouse_outlined,
+                size: 14, color: AppColors.accent),
+            const SizedBox(width: 6),
+            const Text('Drop at Hub: ',
+                style: TextStyle(
+                    color: AppColors.textMuted, fontSize: 11)),
+            Expanded(
+              child: Text(
+                '${shipment['region'] ?? 'Bhubaneswar'} Regional Hub',
+                style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ]),
+        ),
         _InfoRow(Icons.category_outlined,
             shipment['package_type']?.toString() ?? 'General'),
         const SizedBox(height: 3),
@@ -812,14 +854,16 @@ class _ShipmentCard extends StatelessWidget {
               constraints: const BoxConstraints(),
             ),
           if (onPhoto != null) const SizedBox(width: 4),
-          if (status == 'pending') ...[
+          if (status == 'in_transit') ...[
             OutlinedButton.icon(
               onPressed: onMarkDelivered,
-              icon: const Icon(Icons.check, size: 14),
-              label: const Text('Delivered', style: TextStyle(fontSize: 11)),
+              icon: const Icon(Icons.warehouse_rounded, size: 14),
+              label: const Text('Arrived at Hub',
+                  style: TextStyle(fontSize: 11)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.success,
-                side: BorderSide(color: AppColors.success.withOpacity(0.5)),
+                foregroundColor: AppColors.accent,
+                side: BorderSide(
+                    color: AppColors.accent.withValues(alpha: 0.5)),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 shape: RoundedRectangleBorder(
@@ -872,12 +916,13 @@ class _RouteMapTab extends ConsumerStatefulWidget {
 
 class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
   Timer? _locationTimer;
+  Timer? _refreshTimer;
   bool _locationSharing = false;
   bool _tollFree = false;
   String? _selectedOrderId;
+  List<LatLng>? _routePoints; // road-following polyline from Mapbox Directions
+  bool _routeLoading = false;
 
-  // accepted orders passed down — we watch the parent's set via a provider
-  // For now we read from the deliveries provider
   List<Map<String, dynamic>> _acceptedShipments = [];
 
   @override
@@ -885,11 +930,15 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
     super.initState();
     _startLocationSharing();
     _loadAccepted();
+    // Poll for newly-assigned orders every 30 s so map auto-updates
+    _refreshTimer = Timer.periodic(
+        const Duration(seconds: 30), (_) => _loadAccepted());
   }
 
   @override
   void dispose() {
     _locationTimer?.cancel();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
@@ -898,20 +947,69 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
       final dio = ref.read(dioProvider);
       final res = await dio.get('/shipments',
           queryParameters: {'status': 'in_transit', 'page_size': 20});
-      if (mounted) {
-        setState(() {
-          _acceptedShipments =
-              List<Map<String, dynamic>>.from(res.data['items'] ?? []);
-          if (_acceptedShipments.isNotEmpty &&
-              (_selectedOrderId == null ||
-                  !_acceptedShipments
-                      .any((s) => s['id'] == _selectedOrderId))) {
-            _selectedOrderId =
-                _acceptedShipments.first['id'] as String?;
-          }
-        });
+      if (!mounted) return;
+      final items =
+          List<Map<String, dynamic>>.from(res.data['items'] ?? []);
+      final prevId = _selectedOrderId;
+      setState(() {
+        _acceptedShipments = items;
+        if (items.isNotEmpty &&
+            (prevId == null ||
+                !items.any((s) => s['id'] == prevId))) {
+          _selectedOrderId = items.first['id'] as String?;
+        }
+      });
+      // Fetch road route whenever the selected order changes
+      if (_selectedOrderId != prevId || _routePoints == null) {
+        final sel = items.isEmpty
+            ? null
+            : items.firstWhere(
+                (s) => s['id'] == _selectedOrderId,
+                orElse: () => items.first,
+              );
+        if (sel != null) {
+          final region = sel['region'] as String? ?? 'Cuttack';
+          final dest =
+              _regionCoords[region] ?? const LatLng(20.4625, 85.8830);
+          _fetchRoute(_kHubOrigin, dest);
+        }
       }
     } catch (_) {}
+  }
+
+  /// Fetch a road-following polyline from the Mapbox Directions API.
+  Future<void> _fetchRoute(LatLng origin, LatLng dest) async {
+    if (_routeLoading) return;
+    setState(() => _routeLoading = true);
+    try {
+      final uri = Uri.parse(
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '${origin.longitude},${origin.latitude};'
+        '${dest.longitude},${dest.latitude}'
+        '?geometries=geojson&overview=full'
+        '&access_token=${ApiConstants.mapboxToken}',
+      );
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final coords =
+              (routes[0]['geometry']['coordinates'] as List)
+                  .map((c) => LatLng(
+                        (c[1] as num).toDouble(),
+                        (c[0] as num).toDouble(),
+                      ))
+                  .toList();
+          if (mounted) setState(() => _routePoints = coords);
+        }
+      }
+    } catch (_) {
+      // Fall back to straight line — no crash
+    } finally {
+      if (mounted) setState(() => _routeLoading = false);
+    }
   }
 
   Future<void> _postLocation() async {
@@ -937,15 +1035,8 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
         Timer.periodic(const Duration(seconds: 30), (_) => _postLocation());
   }
 
-  /// Build the route polyline from hub to destination, with optional toll-free
-  /// waypoint detour.
-  List<LatLng> _buildRoute(LatLng dest) {
-    if (_tollFree) {
-      // Add a slight inland detour to simulate toll bypass
-      final midLat = (_kHubOrigin.latitude + dest.latitude) / 2 - 0.15;
-      final midLon = (_kHubOrigin.longitude + dest.longitude) / 2 - 0.20;
-      return [_kHubOrigin, LatLng(midLat, midLon), dest];
-    }
+  /// Fallback straight-line route when Mapbox is unavailable.
+  List<LatLng> _buildFallbackRoute(LatLng dest) {
     final midLat = (_kHubOrigin.latitude + dest.latitude) / 2;
     final midLon = (_kHubOrigin.longitude + dest.longitude) / 2;
     return [_kHubOrigin, LatLng(midLat, midLon), dest];
@@ -970,7 +1061,7 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
 
     final region = selected?['region'] as String? ?? 'Cuttack';
     final dest = _regionCoords[region] ?? const LatLng(20.4625, 85.8830);
-    final route = _buildRoute(dest);
+    final route = _routePoints ?? _buildFallbackRoute(dest);
     final distKm = _distKm(_kHubOrigin, dest);
     final etaMin = (distKm / 50 * 60).round(); // assume 50 km/h avg
 
@@ -1073,8 +1164,19 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                                 overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
-                        onChanged: (v) =>
-                            setState(() => _selectedOrderId = v),
+                        onChanged: (v) {
+                          setState(() {
+                            _selectedOrderId = v;
+                            _routePoints = null; // clear stale route
+                          });
+                          final sel = _acceptedShipments.firstWhere(
+                              (s) => s['id'] == v,
+                              orElse: () => _acceptedShipments.first);
+                          final r = sel['region'] as String? ?? 'Cuttack';
+                          final d = _regionCoords[r] ??
+                              const LatLng(20.4625, 85.8830);
+                          _fetchRoute(_kHubOrigin, d);
+                        },
                       ),
                     ),
             ),
@@ -1234,17 +1336,43 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: Row(children: [
-                      const Icon(Icons.route,
-                          color: AppColors.primary, size: 16),
+                      if (_routeLoading)
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary),
+                        )
+                      else
+                        const Icon(Icons.route,
+                            color: AppColors.primary, size: 16),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          'Bhubaneswar HQ → $region',
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Bhubaneswar Hub → $region Regional Hub',
+                              style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (_routePoints != null)
+                              const Text('Road route',
+                                  style: TextStyle(
+                                      color: AppColors.success,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600))
+                            else if (!_routeLoading)
+                              const Text('Straight-line fallback',
+                                  style: TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 9)),
+                          ],
                         ),
                       ),
                       Text(
@@ -1285,19 +1413,19 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: const Column(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _MapLegend(
+                        const _MapLegend(
                             color: AppColors.primary,
-                            label: 'Hub (Start)'),
-                        SizedBox(height: 3),
+                            label: 'Origin Hub (BBW)'),
+                        const SizedBox(height: 3),
                         _MapLegend(
                             color: AppColors.accent,
-                            label: 'Destination'),
-                        SizedBox(height: 3),
-                        _MapLegend(
+                            label: '$region Regional Hub'),
+                        const SizedBox(height: 3),
+                        const _MapLegend(
                             color: AppColors.success,
                             label: 'Your Location'),
                       ],
