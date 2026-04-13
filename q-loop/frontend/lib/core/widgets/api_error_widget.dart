@@ -2,34 +2,50 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
-/// Converts a raw exception (usually DioException) into a short human-readable
-/// message — never exposes internal stack traces or library internals.
-String friendlyError(Object e) {
+/// Returns a short label + optional detail string for an API error.
+/// Label is always shown; detail is shown in a smaller muted line below.
+({String label, String? detail}) errorInfo(Object e) {
   if (e is DioException) {
+    final url = e.requestOptions.path;
     switch (e.type) {
       case DioExceptionType.connectionError:
       case DioExceptionType.connectionTimeout:
-        return 'Could not reach the server.\nMake sure the backend is running.';
+        return (
+          label: 'Cannot connect to server',
+          detail: 'POST/GET $url — check that the backend is running on port 8000',
+        );
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.sendTimeout:
-        return 'Request timed out. Please try again.';
+        return (label: 'Request timed out', detail: url);
       case DioExceptionType.badResponse:
         final code = e.response?.statusCode;
-        if (code == 401) return 'Session expired. Please log in again.';
-        if (code == 403) return 'You don\'t have permission to view this.';
-        if (code == 404) return 'Resource not found.';
-        if (code != null && code >= 500) return 'Server error ($code). Try again later.';
-        return 'Server returned an error (${code ?? '?'}).';
+        final body = e.response?.data;
+        String detail = url;
+        if (body is Map && body['detail'] != null) {
+          detail = '${body['detail']}  ($url)';
+        }
+        if (code == 401) return (label: 'Session expired — please log in again', detail: detail);
+        if (code == 403) return (label: 'Permission denied', detail: detail);
+        if (code == 404) return (label: 'Not found', detail: detail);
+        if (code != null && code >= 500) {
+          return (label: 'Server error $code', detail: detail);
+        }
+        return (label: 'HTTP ${code ?? "?"} error', detail: detail);
       case DioExceptionType.cancel:
-        return 'Request was cancelled.';
+        return (label: 'Request cancelled', detail: url);
       default:
-        return 'Network error. Please try again.';
+        return (label: 'Network error', detail: e.message ?? url);
     }
   }
-  return 'Something went wrong. Please try again.';
+  // Plain string (from e.toString() stored in state)
+  final s = e.toString();
+  if (s.contains('assigned_driver_id') || s.contains('UndefinedColumn')) {
+    return (label: 'Database schema out of date', detail: 'Run: alembic upgrade head');
+  }
+  return (label: 'Error', detail: s.length > 120 ? '${s.substring(0, 120)}…' : s);
 }
 
-/// A centred error state with an icon, friendly message, and optional retry.
+/// A centred error state with icon, message, detail line, and optional retry.
 class ApiErrorWidget extends StatelessWidget {
   const ApiErrorWidget({
     super.key,
@@ -40,22 +56,34 @@ class ApiErrorWidget extends StatelessWidget {
 
   final Object error;
   final VoidCallback? onRetry;
-
-  /// When true renders a smaller inline version (no large icon).
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    final msg = friendlyError(error);
+    final (:label, :detail) = errorInfo(error);
+
     if (compact) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.wifi_off_rounded, size: 14, color: AppColors.error),
+          const Icon(Icons.error_outline_rounded, size: 14, color: AppColors.error),
           const SizedBox(width: 6),
           Flexible(
-            child: Text(msg,
-                style: const TextStyle(color: AppColors.error, fontSize: 12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label,
+                    style: const TextStyle(color: AppColors.error, fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                if (detail != null)
+                  Text(detail,
+                      style: const TextStyle(
+                          color: AppColors.textMuted, fontSize: 10),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+              ],
+            ),
           ),
           if (onRetry != null) ...[
             const SizedBox(width: 8),
@@ -74,19 +102,29 @@ class ApiErrorWidget extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.wifi_off_rounded,
+          Icon(Icons.error_outline_rounded,
               size: 48,
-              color: AppColors.error.withValues(alpha: 0.7)),
+              color: AppColors.error.withValues(alpha: 0.8)),
           const SizedBox(height: 16),
-          Text(msg,
+          Text(label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.error.withValues(alpha: 0.9),
-                fontSize: 14,
-                height: 1.5,
+                color: AppColors.error.withValues(alpha: 0.95),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
               )),
+          if (detail != null) ...[
+            const SizedBox(height: 8),
+            Text(detail,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12,
+                  height: 1.4,
+                )),
+          ],
           if (onRetry != null) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 16),

@@ -53,12 +53,24 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": settings.APP_VERSION, "env": settings.APP_ENV}
 
     # ── Global exception handler ──────────────────────────────────────────────
+    # NOTE: Starlette's ServerErrorMiddleware sits OUTSIDE CORSMiddleware, so
+    # uncaught exceptions that bubble that far will produce a 500 with no CORS
+    # headers — browsers treat this as a connection error. We catch everything
+    # here (inside CORSMiddleware's scope) and add explicit CORS headers as a
+    # belt-and-suspenders safety net so the browser always receives a readable
+    # JSON error instead of a silent network failure.
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
         log.error("Unhandled exception", path=request.url.path, error=str(exc), exc_info=exc)
+        origin = request.headers.get("origin", "")
+        headers = {}
+        if origin:
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Internal server error"},
+            content={"detail": "Internal server error", "path": request.url.path},
+            headers=headers,
         )
 
     return app
