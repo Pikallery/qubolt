@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -8,11 +7,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart'
-    show FormData, MultipartFile, Options, ResponseType;
+    show Dio, FormData, MultipartFile, Options, ResponseType;
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
@@ -982,28 +980,25 @@ class _RouteMapTabState extends ConsumerState<_RouteMapTab> {
     if (_routeLoading) return;
     setState(() => _routeLoading = true);
     try {
-      final uri = Uri.parse(
-        'https://api.mapbox.com/directions/v5/mapbox/driving/'
-        '${origin.longitude},${origin.latitude};'
-        '${dest.longitude},${dest.latitude}'
-        '?geometries=geojson&overview=full'
-        '&access_token=${ApiConstants.mapboxToken}',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        final data =
-            jsonDecode(response.body) as Map<String, dynamic>;
-        final routes = data['routes'] as List?;
-        if (routes != null && routes.isNotEmpty) {
-          final coords =
-              (routes[0]['geometry']['coordinates'] as List)
-                  .map((c) => LatLng(
-                        (c[1] as num).toDouble(),
-                        (c[0] as num).toDouble(),
-                      ))
-                  .toList();
-          if (mounted) setState(() => _routePoints = coords);
-        }
+      final mapboxDio = Dio();
+      final url =
+          'https://api.mapbox.com/directions/v5/mapbox/driving/'
+          '${origin.longitude},${origin.latitude};'
+          '${dest.longitude},${dest.latitude}'
+          '?geometries=geojson&overview=full'
+          '&access_token=${ApiConstants.mapboxToken}';
+      final response = await mapboxDio.get(url);
+      final data = response.data as Map<String, dynamic>;
+      final routes = data['routes'] as List?;
+      if (routes != null && routes.isNotEmpty) {
+        final coords =
+            (routes[0]['geometry']['coordinates'] as List)
+                .map((c) => LatLng(
+                      (c[1] as num).toDouble(),
+                      (c[0] as num).toDouble(),
+                    ))
+                .toList();
+        if (mounted) setState(() => _routePoints = coords);
       }
     } catch (_) {
       // Fall back to straight line — no crash
