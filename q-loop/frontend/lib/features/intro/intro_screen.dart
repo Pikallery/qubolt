@@ -373,12 +373,27 @@ class _ScenePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
+    // Mirror vehicles so they face right (the direction of travel).
+    // Each drawing has its "front" at low-x; flipping around pos.dx + half-width
+    // keeps the vehicle in roughly the same screen region but facing correctly.
+    final vw = switch (type) {
+      _VType.truck   => s * 3.0,
+      _VType.minivan => s * 2.4,
+      _VType.auto    => s * 1.6,
+      _VType.bike    => s * 1.8,
+    };
+    canvas.save();
+    canvas.translate(2 * pos.dx + vw, 0);
+    canvas.scale(-1, 1);
+
     switch (type) {
       case _VType.truck:   _truck(canvas, pos, s, fill, glow, stroke);
       case _VType.minivan: _minivan(canvas, pos, s, fill, glow, stroke);
       case _VType.auto:    _auto(canvas, pos, s, fill, glow, stroke);
       case _VType.bike:    _bike(canvas, pos, s, fill, glow, stroke);
     }
+
+    canvas.restore();
   }
 
   void _drawShape(Canvas canvas, Path path, Paint fill, Paint glow, Paint stroke) {
