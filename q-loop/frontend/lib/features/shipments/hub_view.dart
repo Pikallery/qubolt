@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/widgets/api_error_widget.dart';
 import '../auth/domain/auth_provider.dart';
 import '../comms/chat_screen.dart';
 import '../comms/comms_provider.dart';
@@ -822,9 +823,7 @@ class _ShipmentsTabState extends ConsumerState<_ShipmentsTab> {
               ? const Center(
                   child: CircularProgressIndicator(color: AppColors.primary))
               : _error != null
-                  ? Center(
-                      child: Text(_error!,
-                          style: const TextStyle(color: AppColors.error)))
+                  ? ApiErrorWidget(error: _error!, onRetry: _load)
                   : _shipments.isEmpty
                       ? Center(
                           child: Column(

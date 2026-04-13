@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/widgets/api_error_widget.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -43,9 +44,9 @@ class _ReturnsScreenState extends ConsumerState<ReturnsScreen> {
                   child: returnsAsync.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(
-                      child: Text('Error: $e',
-                          style: const TextStyle(color: AppColors.error)),
+                    error: (e, _) => ApiErrorWidget(
+                      error: e,
+                      onRetry: () => ref.invalidate(_returnsProvider),
                     ),
                     data: (returns) => returns.isEmpty
                         ? const _EmptyState()

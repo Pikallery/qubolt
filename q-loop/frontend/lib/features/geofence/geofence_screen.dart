@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/widgets/api_error_widget.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -143,7 +144,9 @@ class _GeofenceScreenState extends ConsumerState<GeofenceScreen> {
                     loading: () => const Center(
                         child: CircularProgressIndicator(
                             color: AppColors.primary)),
-                    error: (e, _) => _ErrorState(error: e.toString()),
+                    error: (e, _) => ApiErrorWidget(
+                        error: e,
+                        onRetry: () => ref.invalidate(_zonesProvider)),
                     data: (zones) => isMobile
                         ? _MobileLayout(
                             zones: zones,
@@ -770,20 +773,3 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.error});
-  final String error;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: AppColors.error, size: 40),
-        const SizedBox(height: 12),
-        Text('Failed to load zones: $error',
-            style: const TextStyle(color: AppColors.error, fontSize: 13),
-            textAlign: TextAlign.center),
-      ]),
-    );
-  }
-}

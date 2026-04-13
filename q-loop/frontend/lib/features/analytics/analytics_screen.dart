@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/widgets/api_error_widget.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
@@ -189,9 +190,7 @@ class _VehicleChart extends StatelessWidget {
       title: 'Shipments by Vehicle Type',
       child: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('$e',
-                style: const TextStyle(color: AppColors.error, fontSize: 12))),
+        error: (e, _) => ApiErrorWidget(error: e, compact: true),
         data: (list) {
           final colors = [
             AppColors.primary,
@@ -277,9 +276,7 @@ class _ModeChart extends StatelessWidget {
       title: 'Shipments by Delivery Mode',
       child: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('$e',
-                style: const TextStyle(color: AppColors.error, fontSize: 12))),
+        error: (e, _) => ApiErrorWidget(error: e, compact: true),
         data: (list) {
           final colors = [
             AppColors.primary,
@@ -353,9 +350,7 @@ class _PlatformChart extends StatelessWidget {
       height: 220,
       child: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-            child: Text('$e',
-                style: const TextStyle(color: AppColors.error, fontSize: 12))),
+        error: (e, _) => ApiErrorWidget(error: e, compact: true),
         data: (list) => BarChart(BarChartData(
           alignment: BarChartAlignment.spaceAround,
           maxY: 100,
@@ -456,8 +451,7 @@ class _RegionTable extends StatelessWidget {
           const SizedBox(height: 12),
           data.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('$e',
-                style: const TextStyle(color: AppColors.error, fontSize: 12)),
+            error: (e, _) => ApiErrorWidget(error: e, compact: true),
             data: (list) => Table(
               columnWidths: const {
                 0: FlexColumnWidth(3),
@@ -646,10 +640,7 @@ class _WaveFunctionChartState extends State<_WaveFunctionChart>
             ),
             error: (e, _) => SizedBox(
               height: 200,
-              child: Center(
-                  child: Text('$e',
-                      style: const TextStyle(
-                          color: AppColors.error, fontSize: 12))),
+              child: ApiErrorWidget(error: e, compact: true),
             ),
             data: (d) {
               final predicted =

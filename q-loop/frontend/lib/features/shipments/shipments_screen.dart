@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/widgets/api_error_widget.dart';
 import '../auth/domain/auth_provider.dart';
 import '../dashboard/widgets/dark_sidebar.dart';
 
@@ -84,9 +85,10 @@ class _ShipmentsScreenState extends ConsumerState<ShipmentsScreen> {
                   child: data.when(
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(
-                      child: Text('Error: $e',
-                          style: const TextStyle(color: AppColors.error)),
+                    error: (e, _) => ApiErrorWidget(
+                      error: e,
+                      onRetry: () =>
+                          ref.invalidate(_shipmentsProvider(_providerKey)),
                     ),
                     data: (d) {
                       final items = (d['items'] as List?) ?? [];
@@ -633,18 +635,7 @@ class _ProofOfDeliveryDialogState extends State<_ProofOfDeliveryDialog> {
           child: CircularProgressIndicator(color: AppColors.primary));
     }
     if (_error != null) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.error_outline, color: AppColors.error, size: 32),
-          const SizedBox(height: 8),
-          Text('Failed to load photos',
-              style: TextStyle(color: AppColors.error)),
-          const SizedBox(height: 4),
-          Text(_error!,
-              style: TextStyle(
-                  color: AppColors.labelText(context), fontSize: 11)),
-        ]),
-      );
+      return ApiErrorWidget(error: _error!, onRetry: _fetchPhotos);
     }
     if (_photos.isEmpty) {
       return Center(

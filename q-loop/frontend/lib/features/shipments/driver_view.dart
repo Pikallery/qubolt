@@ -14,6 +14,7 @@ import 'package:dio/dio.dart'
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/widgets/api_error_widget.dart';
 import '../auth/domain/auth_provider.dart';
 import '../comms/chat_screen.dart';
 import '../comms/comms_provider.dart';
@@ -438,8 +439,7 @@ class _DeliveriesTabState extends ConsumerState<_DeliveriesTab> {
           child: CircularProgressIndicator(color: AppColors.primary));
     }
     if (_error != null) {
-      return Center(
-          child: Text(_error!, style: const TextStyle(color: AppColors.error)));
+      return ApiErrorWidget(error: _error!, onRetry: _load);
     }
     if (_shipments.isEmpty) {
       return _EmptyDeliveries();
