@@ -329,6 +329,39 @@ class _ShipmentRow extends ConsumerWidget {
                 style: TextStyle(
                     fontSize: 12, color: AppColors.labelText(context))),
           ),
+          // Driver assigned
+          Expanded(
+            flex: 2,
+            child: Builder(builder: (ctx) {
+              final role = ref.read(authNotifierProvider).role ?? '';
+              if (role != 'manager' && role != 'admin' && role != 'superadmin') {
+                return const SizedBox.shrink();
+              }
+              final driverId = s['assigned_driver_id'] as String?;
+              if (driverId == null || driverId.isEmpty) {
+                return Text('Unassigned',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted.withValues(alpha: 0.7),
+                        fontStyle: FontStyle.italic));
+              }
+              return Row(children: [
+                const Icon(Icons.person_rounded,
+                    size: 12, color: AppColors.success),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    driverId.substring(0, 8),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.success,
+                        fontFamily: 'monospace'),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ]);
+            }),
+          ),
           // Distance
           Expanded(
             flex: 1,
@@ -338,27 +371,44 @@ class _ShipmentRow extends ConsumerWidget {
             ),
           ),
           // Assign Driver button (manager/admin only)
-          if (status == 'pending' && shipmentId.isNotEmpty) Builder(
+          if (shipmentId.isNotEmpty) Builder(
             builder: (ctx) {
               final role = ref.read(authNotifierProvider).role ?? '';
               if (role != 'manager' && role != 'admin' && role != 'superadmin') {
                 return const SizedBox.shrink();
               }
-              return InkWell(
-                onTap: () => _AssignDriverDialog.show(ctx, ref, shipmentId),
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Tooltip(
-                    message: 'Assign Driver',
-                    child: Icon(Icons.person_add_outlined,
-                        size: 16, color: AppColors.primary.withValues(alpha: 0.85)),
+              final alreadyAssigned =
+                  (s['assigned_driver_id'] as String?)?.isNotEmpty ?? false;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: TextButton.icon(
+                  onPressed: () =>
+                      _AssignDriverDialog.show(ctx, ref, shipmentId),
+                  icon: Icon(
+                    alreadyAssigned
+                        ? Icons.swap_horiz_rounded
+                        : Icons.person_add_outlined,
+                    size: 14,
+                  ),
+                  label: Text(
+                    alreadyAssigned ? 'Reassign' : 'Assign',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.35)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6)),
                   ),
                 ),
               );
             },
           ),
-          if (status == 'pending' && shipmentId.isNotEmpty) const SizedBox(width: 4),
           // AI ETA button
           if (status != 'delivered' && shipmentId.isNotEmpty)
             InkWell(
