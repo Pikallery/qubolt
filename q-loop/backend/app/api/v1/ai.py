@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import uuid
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import Integer, func, select
+
+logger = logging.getLogger(__name__)
 
 from app.dependencies import CurrentTenant, CurrentUser, DBSession
 from app.models.shipment import Shipment
@@ -89,7 +93,11 @@ async def supply_chain_insight(
     if body.context:
         summaries.append({"_context": body.context})
 
-    return await ai_service.get_supply_chain_insight(summaries)
+    try:
+        return await ai_service.get_supply_chain_insight(summaries)
+    except Exception as exc:
+        logger.warning("AI insight failed: %s", exc)
+        raise HTTPException(status_code=503, detail=f"AI service unavailable: {exc}")
 
 
 @router.post("/route-explain/{route_id}", response_model=RouteExplanation)
@@ -127,7 +135,11 @@ async def explain_route(
             for s in stops
         ],
     }
-    return await ai_service.get_route_explanation(route_summary)
+    try:
+        return await ai_service.get_route_explanation(route_summary)
+    except Exception as exc:
+        logger.warning("AI route explain failed: %s", exc)
+        raise HTTPException(status_code=503, detail=f"AI service unavailable: {exc}")
 
 
 @router.post("/eta-predict/{shipment_id}", response_model=ETAPrediction)
@@ -156,4 +168,8 @@ async def predict_eta(
         "is_delayed": shipment.is_delayed,
         "created_at": shipment.created_at.isoformat() if shipment.created_at else None,
     }
-    return await ai_service.predict_eta(summary)
+    try:
+        return await ai_service.predict_eta(summary)
+    except Exception as exc:
+        logger.warning("AI ETA predict failed: %s", exc)
+        raise HTTPException(status_code=503, detail=f"AI service unavailable: {exc}")

@@ -457,7 +457,7 @@ class _ShipmentRow extends ConsumerWidget {
     );
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get(ApiConstants.aiEtaPredict(id));
+      final res = await dio.post(ApiConstants.aiEtaPredict(id));
       final data = res.data as Map<String, dynamic>;
       final eta = data['eta'] as String? ??
           data['predicted_eta'] as String? ??
