@@ -390,7 +390,7 @@ class _RouteCard extends StatelessWidget {
     );
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get(ApiConstants.aiRouteExplain(id));
+      final res = await dio.post(ApiConstants.aiRouteExplain(id));
       final data = res.data as Map<String, dynamic>;
       final explanation = (data['explanation'] as String?) ??
           (data['insight'] as String?) ??

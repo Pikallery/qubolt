@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = "insecure-dev-key-replace-in-prod"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     QR_TOKEN_EXPIRE_SECONDS: int = 300  # 5 minutes
 
