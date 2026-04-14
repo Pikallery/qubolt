@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     # Google Gemini AI
     GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY_FALLBACK: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_TEMPERATURE: float = 0.6
     GEMINI_TOP_P: float = 0.9

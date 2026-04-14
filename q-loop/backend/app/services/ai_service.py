@@ -55,36 +55,51 @@ def _strip_markdown(text: str) -> str:
 
 # ── Gemini client setup ───────────────────────────────────────────────────────
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
-
 _semaphore = asyncio.Semaphore(settings.AI_CONCURRENCY_LIMIT)
+
+
+def _is_quota_error(exc: Exception) -> bool:
+    err = str(exc).lower()
+    return any(k in err for k in ("quota", "rate", "429", "resource_exhausted", "limit"))
+
+
+async def _call_gemini(api_key: str, system: str, user: str) -> str:
+    """Single Gemini call with a specific API key. Raises RuntimeError on quota."""
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name=settings.GEMINI_MODEL,
+        system_instruction=system,
+        generation_config=genai.GenerationConfig(
+            temperature=settings.GEMINI_TEMPERATURE,
+            top_p=settings.GEMINI_TOP_P,
+            max_output_tokens=settings.GEMINI_MAX_TOKENS,
+        ),
+    )
+    async with _semaphore:
+        response = await asyncio.to_thread(model.generate_content, user)
+    return response.text or ""
 
 
 async def _chat(system: str, user: str) -> str:
     """
-    Send a prompt to Gemini and return the text response.
-    Falls back to a structured local response if the API is unavailable or quota exceeded.
+    Send a prompt to Gemini.
+    Chain: primary key → fallback key → raises QUOTA_EXCEEDED (caller handles local fallback).
     """
-    if not settings.GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY not configured")
-    try:
-        model = genai.GenerativeModel(
-            model_name=settings.GEMINI_MODEL,
-            system_instruction=system,
-            generation_config=genai.GenerationConfig(
-                temperature=settings.GEMINI_TEMPERATURE,
-                top_p=settings.GEMINI_TOP_P,
-                max_output_tokens=settings.GEMINI_MAX_TOKENS,
-            ),
-        )
-        async with _semaphore:
-            response = await asyncio.to_thread(model.generate_content, user)
-        return response.text or ""
-    except Exception as exc:
-        err = str(exc).lower()
-        if "quota" in err or "rate" in err or "429" in err or "resource_exhausted" in err:
-            raise RuntimeError(f"QUOTA_EXCEEDED:{exc}")
-        raise
+    keys = [k for k in [settings.GEMINI_API_KEY, settings.GEMINI_API_KEY_FALLBACK] if k]
+    if not keys:
+        raise RuntimeError("QUOTA_EXCEEDED:No Gemini API keys configured")
+
+    last_exc: Exception | None = None
+    for api_key in keys:
+        try:
+            return await _call_gemini(api_key, system, user)
+        except Exception as exc:
+            if _is_quota_error(exc):
+                last_exc = exc
+                continue  # try next key
+            raise  # non-quota error — propagate immediately
+
+    raise RuntimeError(f"QUOTA_EXCEEDED:{last_exc}")
 
 
 # ── Public functions ──────────────────────────────────────────────────────────
