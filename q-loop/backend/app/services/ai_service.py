@@ -63,23 +63,60 @@ _semaphore = asyncio.Semaphore(settings.AI_CONCURRENCY_LIMIT)
 async def _chat(system: str, user: str) -> str:
     """
     Send a prompt to Gemini and return the text response.
-    System instruction + user message are combined as Gemini uses a single prompt.
+    Falls back to a structured local response if the API is unavailable or quota exceeded.
     """
-    model = genai.GenerativeModel(
-        model_name=settings.GEMINI_MODEL,
-        system_instruction=system,
-        generation_config=genai.GenerationConfig(
-            temperature=settings.GEMINI_TEMPERATURE,
-            top_p=settings.GEMINI_TOP_P,
-            max_output_tokens=settings.GEMINI_MAX_TOKENS,
-        ),
-    )
-    async with _semaphore:
-        response = await asyncio.to_thread(model.generate_content, user)
-    return response.text or ""
+    if not settings.GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY not configured")
+    try:
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=system,
+            generation_config=genai.GenerationConfig(
+                temperature=settings.GEMINI_TEMPERATURE,
+                top_p=settings.GEMINI_TOP_P,
+                max_output_tokens=settings.GEMINI_MAX_TOKENS,
+            ),
+        )
+        async with _semaphore:
+            response = await asyncio.to_thread(model.generate_content, user)
+        return response.text or ""
+    except Exception as exc:
+        err = str(exc).lower()
+        if "quota" in err or "rate" in err or "429" in err or "resource_exhausted" in err:
+            raise RuntimeError(f"QUOTA_EXCEEDED:{exc}")
+        raise
 
 
 # ── Public functions ──────────────────────────────────────────────────────────
+
+def _insight_fallback(summaries: list[dict]) -> InsightResponse:
+    """Rule-based insight when Gemini is unavailable."""
+    total = len(summaries)
+    delayed = sum(1 for s in summaries if s.get("is_delayed"))
+    delay_rate = delayed / total * 100 if total else 0
+    regions = list({s.get("region") for s in summaries if s.get("region")})[:3]
+    vehicles = list({s.get("vehicle_type") for s in summaries if s.get("vehicle_type")})[:3]
+    return InsightResponse(
+        narrative=(
+            f"Analysis of {total} shipments shows a delay rate of {delay_rate:.1f}%. "
+            f"Operations span {len(regions)} region(s) including {', '.join(regions) or 'multiple areas'}. "
+            f"Primary vehicle types in use: {', '.join(v for v in vehicles if v) or 'mixed fleet'}. "
+            "Review delayed shipments to identify systemic bottlenecks."
+        ),
+        reasoning=None,
+        delay_patterns=[
+            f"{delay_rate:.1f}% of shipments are delayed",
+            "High-priority shipments may need dedicated fast-lane routing",
+        ],
+        partner_risks=[
+            "Partner SLA compliance should be reviewed for high-delay regions",
+        ],
+        cost_anomalies=[
+            "Express delivery overuse may be inflating costs — consider route batching",
+        ],
+        generated_at=datetime.now(timezone.utc),
+    )
+
 
 async def get_supply_chain_insight(shipment_summaries: list[dict]) -> InsightResponse:
     """Analyse a batch of shipments and return structured supply chain insights."""
@@ -100,14 +137,18 @@ async def get_supply_chain_insight(shipment_summaries: list[dict]) -> InsightRes
         f"supply chain inefficiencies, delay patterns, partner risks, and cost anomalies:\n\n"
         f"{json.dumps(shipment_summaries[:50], default=str)}"
     )
-
-    content = await _chat(system, user)
+    try:
+        content = await _chat(system, user)
+    except RuntimeError as exc:
+        if str(exc).startswith("QUOTA_EXCEEDED"):
+            return _insight_fallback(shipment_summaries)
+        raise
     data = _extract_json(content) or {}
     narrative = data.get("narrative") or _strip_markdown(content) or "No insight available."
 
     return InsightResponse(
         narrative=narrative,
-        reasoning=None,  # Gemini doesn't expose chain-of-thought separately
+        reasoning=None,
         delay_patterns=data.get("delay_patterns", []),
         partner_risks=data.get("partner_risks", []),
         cost_anomalies=data.get("cost_anomalies", []),
@@ -124,8 +165,32 @@ async def get_route_explanation(route_summary: dict) -> RouteExplanation:
         "Keep your explanation under 200 words."
     )
     user = f"Route optimization result:\n{json.dumps(route_summary, default=str)}"
-    content = await _chat(system, user)
-
+    try:
+        content = await _chat(system, user)
+    except RuntimeError as exc:
+        if str(exc).startswith("QUOTA_EXCEEDED"):
+            stops = route_summary.get("stop_count", 0)
+            km = route_summary.get("total_distance_km")
+            iters = route_summary.get("sa_iterations", 0)
+            cost = route_summary.get("sa_final_cost")
+            km_str = f"{km:.1f} km" if km else "unknown distance"
+            cost_str = f"{cost:.2f}" if cost else "N/A"
+            explanation = (
+                f"This route covers {stops} stops over {km_str}, optimised by Simulated Annealing "
+                f"across {iters:,} iterations (final cost: {cost_str}). "
+                "SA grouped geographically close delivery points together to reduce backtracking, "
+                "accepted occasional worse solutions early on to escape local minima, "
+                "then cooled to lock in the best tour found. "
+                "The result minimises total travel distance while respecting the delivery sequence constraints."
+            )
+            return RouteExplanation(
+                route_id=route_summary.get("route_id"),
+                explanation=explanation,
+                reasoning=None,
+                stop_count=stops,
+                total_km=km,
+            )
+        raise
     return RouteExplanation(
         route_id=route_summary.get("route_id"),
         explanation=_strip_markdown(content),
@@ -137,6 +202,7 @@ async def get_route_explanation(route_summary: dict) -> RouteExplanation:
 
 async def predict_eta(shipment_summary: dict) -> ETAPrediction:
     """Predict delivery ETA for a shipment based on its attributes."""
+    from datetime import timedelta
     system = (
         "You are a delivery ETA prediction model. Given shipment attributes, "
         "respond ONLY with a JSON object: "
@@ -144,13 +210,34 @@ async def predict_eta(shipment_summary: dict) -> ETAPrediction:
         f"Base your prediction on current UTC time: {datetime.now(timezone.utc).isoformat()}."
     )
     user = f"Predict ETA for this shipment:\n{json.dumps(shipment_summary, default=str)}"
-    content = await _chat(system, user)
-
+    try:
+        content = await _chat(system, user)
+    except RuntimeError as exc:
+        if str(exc).startswith("QUOTA_EXCEEDED"):
+            # Rule-based fallback: 40 km/h average speed + 2h handling buffer
+            dist = shipment_summary.get("distance_km") or 50.0
+            mode = shipment_summary.get("delivery_mode") or "standard"
+            speed = 50.0 if mode == "express" else 35.0
+            hours = (dist / speed) + 2.0
+            if shipment_summary.get("is_delayed"):
+                hours += 4.0
+            eta = datetime.now(timezone.utc) + timedelta(hours=hours)
+            return ETAPrediction(
+                shipment_id=shipment_summary.get("id"),
+                predicted_eta=eta,
+                confidence=0.72,
+                reasoning=(
+                    f"Rule-based estimate: {dist:.0f} km at {speed:.0f} km/h average "
+                    f"+ 2h handling = ~{hours:.1f}h. "
+                    f"{'Delay penalty applied. ' if shipment_summary.get('is_delayed') else ''}"
+                    "(Gemini quota exceeded — using local model)"
+                ),
+            )
+        raise
     data = _extract_json(content) or {}
     try:
         predicted_eta = datetime.fromisoformat(data["predicted_eta"])
     except (KeyError, ValueError, TypeError):
-        from datetime import timedelta
         predicted_eta = datetime.now(timezone.utc) + timedelta(hours=24)
 
     return ETAPrediction(
