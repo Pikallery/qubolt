@@ -36,6 +36,7 @@ jobs:
             --image "$IMAGE" \
             --region asia-south1 \
             --project qubolt-new-2026 \
+            --set-env-vars "DATABASE_URL=${{ secrets.NEON_DATABASE_URL }},DATABASE_URL_SYNC=${{ secrets.NEON_DATABASE_URL_SYNC }},SECRET_KEY=${{ secrets.APP_SECRET_KEY }},APP_ENV=production,GEMINI_API_KEY=AIzaSyBwyXwKHAlw7RkiebNbvl9h1s9Ux3kxWBg,GEMINI_API_KEY_FALLBACK=AIzaSyBh3mIz2jk172q6NOVpyLBiGWXdERXURgA,GEMINI_MODEL=gemini-2.0-flash,ACCESS_TOKEN_EXPIRE_MINUTES=480" \
             --quiet
 
   # ── Frontend → Firebase Hosting ─────────────────────────────────────────────
