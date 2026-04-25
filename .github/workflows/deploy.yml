@@ -56,6 +56,5 @@ jobs:
       - name: Deploy to Firebase Hosting
         working-directory: q-loop/frontend
         run: |
-          npm install -g firebase-tools
-          node -e "const fs=require('fs');const f=JSON.parse(fs.readFileSync('firebase.json'));delete f.flutter;fs.writeFileSync('firebase.json',JSON.stringify(f,null,2))"
+          npm install -g firebase-tools@13
           firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}" --project qubolt-app
