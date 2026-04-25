@@ -157,7 +157,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePass ? Icons.visibility_off : Icons.visibility,
-                            color: AppColors.textMuted,
+                            color: Colors.grey.shade400,
                             size: 20,
                           ),
                           onPressed: () => setState(() => _obscurePass = !_obscurePass),
