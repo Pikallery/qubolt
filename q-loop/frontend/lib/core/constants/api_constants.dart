@@ -1,7 +1,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = 'https://qubolt-api-772796162454.asia-south1.run.app/api/v1';
   static const String tenantId = 'a25c91cf-681c-4381-9122-8c6e807a29c0';
 
   // Mapbox
