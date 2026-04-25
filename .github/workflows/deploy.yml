@@ -57,6 +57,4 @@ jobs:
         working-directory: q-loop/frontend
         run: |
           npm install -g firebase-tools@13
-          echo "=== firebase.json ===" && cat firebase.json
-          echo "=== firebase version ===" && firebase --version
-          firebase deploy --token "${{ secrets.FIREBASE_TOKEN }}" --project qubolt-app --debug 2>&1 | head -60
+          firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}" --project qubolt-app

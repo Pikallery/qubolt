@@ -1,1 +1,24 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"qubolt-app","configurations":{"web":"1:123506780842:web:bb06dbfe00365219e9fed3"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "qubolt-app",
+          "configurations": {
+            "web": "1:123506780842:web:bb06dbfe00365219e9fed3"
+          }
+        }
+      }
+    }
+  }
+}
