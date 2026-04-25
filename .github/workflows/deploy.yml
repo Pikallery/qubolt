@@ -19,23 +19,13 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-
-      - name: Build & push Docker image
-        working-directory: q-loop/backend
-        run: |
-          IMAGE="asia-south1-docker.pkg.dev/qubolt-new-2026/cloud-run-source-deploy/qubolt-api:${{ github.sha }}"
-          docker build --platform linux/amd64 -t "$IMAGE" .
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-
-      - name: Deploy to Cloud Run
+      - name: Build & deploy to Cloud Run
         run: |
           gcloud run deploy qubolt-api \
-            --image "$IMAGE" \
+            --source q-loop/backend \
             --region asia-south1 \
             --project qubolt-new-2026 \
+            --allow-unauthenticated \
             --set-env-vars "DATABASE_URL=${{ secrets.NEON_DATABASE_URL }},DATABASE_URL_SYNC=${{ secrets.NEON_DATABASE_URL_SYNC }},SECRET_KEY=${{ secrets.APP_SECRET_KEY }},APP_ENV=production,GEMINI_API_KEY=AIzaSyBwyXwKHAlw7RkiebNbvl9h1s9Ux3kxWBg,GEMINI_API_KEY_FALLBACK=AIzaSyBh3mIz2jk172q6NOVpyLBiGWXdERXURgA,GEMINI_MODEL=gemini-2.0-flash,ACCESS_TOKEN_EXPIRE_MINUTES=480" \
             --quiet
 
