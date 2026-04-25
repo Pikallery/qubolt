@@ -25,7 +25,7 @@ jobs:
       - name: Build & push Docker image
         working-directory: q-loop/backend
         run: |
-          IMAGE="asia-south1-docker.pkg.dev/qubolt-493307/cloud-run-source-deploy/qubolt-api:${{ github.sha }}"
+          IMAGE="asia-south1-docker.pkg.dev/qubolt-new-2026/cloud-run-source-deploy/qubolt-api:${{ github.sha }}"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
@@ -35,7 +35,7 @@ jobs:
           gcloud run deploy qubolt-api \
             --image "$IMAGE" \
             --region asia-south1 \
-            --project qubolt-493307 \
+            --project qubolt-new-2026 \
             --quiet
 
   # ── Frontend → Firebase Hosting ─────────────────────────────────────────────
