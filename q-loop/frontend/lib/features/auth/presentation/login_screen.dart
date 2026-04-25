@@ -29,6 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passCtrl = TextEditingController();
   bool _loading = false;
   bool _warping = false;
+  bool _obscurePass = true;
   String? _error;
 
   @override
@@ -122,11 +123,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
 
                 // Password field
-                _InputField(
-                  controller: _passCtrl,
-                  label: 'Password',
-                  hint: '••••••••',
-                  obscureText: true,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Password',
+                        style: TextStyle(
+                            color: AppColors.textSub(context),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _passCtrl,
+                      obscureText: _obscurePass,
+                      style: TextStyle(color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: '••••••••',
+                        hintStyle: TextStyle(color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.cardBg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.divider(context)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.divider(context)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePass ? Icons.visibility_off : Icons.visibility,
+                            color: AppColors.textMuted,
+                            size: 20,
+                          ),
+                          onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
 
@@ -211,14 +249,12 @@ class _InputField extends StatelessWidget {
     required this.label,
     required this.hint,
     this.keyboardType,
-    this.obscureText = false,
   });
 
   final TextEditingController controller;
   final String label;
   final String hint;
   final TextInputType? keyboardType;
-  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +270,6 @@ class _InputField extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          obscureText: obscureText,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
