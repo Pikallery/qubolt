@@ -26,7 +26,7 @@ jobs:
         working-directory: q-loop/backend
         run: |
           IMAGE="asia-south1-docker.pkg.dev/qubolt-new-2026/cloud-run-source-deploy/qubolt-api:${{ github.sha }}"
-          docker build -t "$IMAGE" .
+          docker build --platform linux/amd64 -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
