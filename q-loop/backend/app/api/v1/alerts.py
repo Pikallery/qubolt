@@ -97,6 +97,29 @@ async def get_pending_alerts(
                     created_at=s.created_at,
                 ))
 
+    elif current_user.role == "gatekeeper":
+        # Driver-arrived events in the last 2 hours waiting for hub confirmation
+        two_hours_ago = now - timedelta(hours=2)
+        event_result = await db.execute(
+            select(ShipmentEvent)
+            .where(
+                ShipmentEvent.tenant_id == tenant.id,
+                ShipmentEvent.event_type == "driver_arrived",
+                ShipmentEvent.occurred_at >= two_hours_ago,
+            )
+            .order_by(ShipmentEvent.occurred_at.desc())
+            .limit(20)
+        )
+        for evt in event_result.scalars().all():
+            alerts.append(AlertItem(
+                id=evt.id,
+                alert_type="driver_arrived",
+                title="Driver arrived at hub",
+                detail=evt.note or f"Shipment {str(evt.shipment_id)[:8]} — awaiting confirmation",
+                resource_id=evt.shipment_id,
+                created_at=evt.occurred_at,
+            ))
+
     elif current_user.role in ("admin", "manager", "operator", "superadmin"):
         # 3. Recent shipment status changes (last hour)
         one_hour_ago = now - timedelta(hours=1)
