@@ -1488,11 +1488,19 @@ class _EarningsTab extends ConsumerStatefulWidget {
 class _EarningsTabState extends ConsumerState<_EarningsTab> {
   Map<String, dynamic>? _data;
   bool _loading = true;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _fetch();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _fetch());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetch() async {
