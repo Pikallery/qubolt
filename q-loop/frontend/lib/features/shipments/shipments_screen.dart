@@ -383,7 +383,7 @@ class _ShipmentRow extends ConsumerWidget {
                 padding: const EdgeInsets.only(right: 6),
                 child: TextButton.icon(
                   onPressed: () =>
-                      _AssignDriverDialog.show(ctx, ref, shipmentId),
+                      _AssignDriverDialog.show(ctx, ref, shipmentId, s['vehicle_type'] as String?),
                   icon: Icon(
                     alreadyAssigned
                         ? Icons.swap_horiz_rounded
@@ -837,15 +837,16 @@ class _PhotoTileState extends State<_PhotoTile> {
 // ── Assign Driver Dialog ──────────────────────────────────────────────────────
 
 class _AssignDriverDialog extends StatefulWidget {
-  const _AssignDriverDialog({required this.shipmentId});
+  const _AssignDriverDialog({required this.shipmentId, this.vehicleType});
   final String shipmentId;
+  final String? vehicleType;
 
-  static void show(BuildContext context, WidgetRef ref, String shipmentId) {
+  static void show(BuildContext context, WidgetRef ref, String shipmentId, String? vehicleType) {
     showDialog<void>(
       context: context,
       builder: (_) => ProviderScope(
         parent: ProviderScope.containerOf(context),
-        child: _AssignDriverDialog(shipmentId: shipmentId),
+        child: _AssignDriverDialog(shipmentId: shipmentId, vehicleType: vehicleType),
       ),
     );
   }
@@ -868,10 +869,14 @@ class _AssignDriverDialogState extends State<_AssignDriverDialog> {
 
   Future<void> _fetchDrivers() async {
     try {
-      // Access dio via a consumer - use direct access from ProviderScope
       final container = ProviderScope.containerOf(context);
       final dio = container.read(dioProvider);
-      final res = await dio.get(ApiConstants.userDrivers);
+      final res = await dio.get(
+        ApiConstants.userDrivers,
+        queryParameters: widget.vehicleType != null
+            ? {'vehicle_type': widget.vehicleType}
+            : null,
+      );
       final list = List<Map<String, dynamic>>.from(res.data as List? ?? []);
       if (mounted) setState(() { _drivers = list; _loading = false; });
     } catch (e) {

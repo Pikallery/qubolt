@@ -11,6 +11,7 @@ from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.auth_service import create_user
 from app.utils.pagination import paginate
 from app.models.user import User
+from app.models.user_profile import UserProfile
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -46,13 +47,18 @@ async def list_drivers(
     tenant: CurrentTenant,
     db: DBSession,
     _: CurrentUser,
+    vehicle_type: str | None = Query(None),
 ):
-    """Return all active drivers for this tenant (used by manager assign-driver flow)."""
-    result = await db.execute(
+    """Return active drivers for this tenant, optionally filtered by vehicle type."""
+    stmt = (
         select(User)
+        .join(UserProfile, UserProfile.user_id == User.id, isouter=True)
         .where(User.tenant_id == tenant.id, User.role == "driver", User.is_active == True)
-        .order_by(User.full_name)
     )
+    if vehicle_type:
+        stmt = stmt.where(UserProfile.vehicle_type == vehicle_type)
+    stmt = stmt.order_by(User.full_name)
+    result = await db.execute(stmt)
     return [UserRead.model_validate(u) for u in result.scalars().all()]
 
 
