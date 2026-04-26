@@ -1478,221 +1478,187 @@ class _MapLegend extends StatelessWidget {
 
 // ── Tab 3: Earnings ───────────────────────────────────────────────────────────
 
-class _EarningsTab extends ConsumerWidget {
+class _EarningsTab extends ConsumerStatefulWidget {
   const _EarningsTab();
 
-  static const _historicalTransactions = [
-    (date: 'Today 09:15', desc: 'PKG-2024-0841', amount: 180.0, isIncome: true),
-    (date: 'Today 11:30', desc: 'PKG-2024-0842', amount: 220.0, isIncome: true),
-    (date: 'Today 13:00', desc: 'PKG-2024-0843', amount: 150.0, isIncome: true),
-    (date: 'Yesterday', desc: 'PKG-2024-0831', amount: 200.0, isIncome: true),
-    (date: 'Yesterday', desc: 'PKG-2024-0832', amount: 175.0, isIncome: true),
-    (
-      date: 'Fuel Deduction',
-      desc: 'Route-OD-07',
-      amount: 120.0,
-      isIncome: false
-    ),
-    (date: 'Mon 15 Apr', desc: 'PKG-2024-0819', amount: 195.0, isIncome: true),
-    (date: 'Mon 15 Apr', desc: 'PKG-2024-0820', amount: 210.0, isIncome: true),
-  ];
+  @override
+  ConsumerState<_EarningsTab> createState() => _EarningsTabState();
+}
 
-  static const _baseWeek = 1130.0;
-  static const _baseToday = 550.0;
+class _EarningsTabState extends ConsumerState<_EarningsTab> {
+  Map<String, dynamic>? _data;
+  bool _loading = true;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sessionDeliveries = ref.watch(_sessionDeliveriesProvider);
+  void initState() {
+    super.initState();
+    _fetch();
+  }
 
-    // Compute session earnings
-    final sessionTotal =
-        sessionDeliveries.fold(0.0, (sum, s) => sum + _calcEarnings(s));
-    final totalWeek = _baseWeek + sessionTotal;
-    final todayEarning = _baseToday + sessionTotal;
-    // pending payout = historical pending (580) minus session earnings already
-    // credited, floored at 0
-    final pendingPayout = (580.0 - sessionTotal).clamp(0.0, double.infinity);
+  Future<void> _fetch() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get(ApiConstants.driverMyEarnings);
+      if (mounted) setState(() { _data = res.data as Map<String, dynamic>; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
-    // Build new rows from session deliveries (newest first)
-    final now = DateTime.now();
-    final timeStamp =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-
-    Widget txRow({
-      required String date,
-      required String desc,
-      required double amount,
-      required bool isIncome,
-      bool isNew = false,
-    }) {
-      final color = isIncome ? AppColors.success : AppColors.error;
-      return Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: isNew
-              ? AppColors.success.withValues(alpha: 0.06)
-              : AppColors.cardBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isNew
-                ? AppColors.success.withValues(alpha: 0.3)
-                : AppColors.border,
-          ),
+  Widget _txRow({
+    required String date,
+    required String desc,
+    required double amount,
+    required bool isIncome,
+    bool isNew = false,
+  }) {
+    final color = isIncome ? AppColors.success : AppColors.error;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isNew ? AppColors.success.withValues(alpha: 0.06) : AppColors.cardBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isNew ? AppColors.success.withValues(alpha: 0.3) : AppColors.border,
         ),
-        child: Row(children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isIncome ? Icons.arrow_upward : Icons.arrow_downward,
-              color: color,
-              size: 16,
-            ),
+      ),
+      child: Row(children: [
+        Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12), shape: BoxShape.circle,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(
-                  child: Text(desc,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500)),
+          child: Icon(isIncome ? Icons.arrow_upward : Icons.arrow_downward, color: color, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(
+                child: Text(desc, style: const TextStyle(
+                    color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+              if (isNew)
+                Container(
+                  margin: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
+                  child: const Text('NEW', style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.w800)),
                 ),
-                if (isNew)
-                  Container(
-                    margin: const EdgeInsets.only(left: 6),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.success,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text('NEW',
-                        style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w800)),
-                  ),
-              ]),
-              Text(date,
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 11)),
             ]),
-          ),
-          Text(
-            '${isIncome ? '+' : '-'}₹${amount.toStringAsFixed(0)}',
-            style: TextStyle(
-                color: color, fontSize: 14, fontWeight: FontWeight.w700),
-          ),
-        ]),
-      );
+            Text(date, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          ]),
+        ),
+        Text(
+          '${isIncome ? '+' : '-'}₹${amount.toStringAsFixed(0)}',
+          style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sessionDeliveries = ref.watch(_sessionDeliveriesProvider);
+    final sessionTotal = sessionDeliveries.fold(0.0, (sum, s) => sum + _calcEarnings(s));
+
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Summary card ────────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.2),
-                  AppColors.accent.withValues(alpha: 0.1),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    final apiToday = (_data?['today'] as num?)?.toDouble() ?? 0.0;
+    final apiWeek  = (_data?['this_week'] as num?)?.toDouble() ?? 0.0;
+    final apiPending = (_data?['pending_payout'] as num?)?.toDouble() ?? 0.0;
+    final apiTxns = (_data?['transactions'] as List?) ?? [];
+
+    final totalWeek    = apiWeek + sessionTotal;
+    final todayEarning = apiToday + sessionTotal;
+    final pendingPayout = (apiPending - sessionTotal).clamp(0.0, double.infinity);
+
+    final now = DateTime.now();
+    final timeStamp = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    return RefreshIndicator(
+      onRefresh: _fetch,
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Summary card ──────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary.withValues(alpha: 0.2), AppColors.accent.withValues(alpha: 0.1)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
               ),
-              borderRadius: BorderRadius.circular(14),
-              border:
-                  Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-            ),
-            child: Column(children: [
-              const Text('This Week',
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-              const SizedBox(height: 4),
-              Text('₹${totalWeek.toStringAsFixed(0)}',
-                  style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800)),
-              if (sessionTotal > 0) ...[
+              child: Column(children: [
+                const Text('This Week', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                 const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                Text('₹${totalWeek.toStringAsFixed(0)}',
+                    style: const TextStyle(color: AppColors.primary, fontSize: 36, fontWeight: FontWeight.w800)),
+                if (sessionTotal > 0) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '+₹${sessionTotal.toStringAsFixed(0)} from ${sessionDeliveries.length} new deliver${sessionDeliveries.length == 1 ? 'y' : 'ies'} today',
+                      style: const TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                  child: Text(
-                    '+₹${sessionTotal.toStringAsFixed(0)} from ${sessionDeliveries.length} new deliver${sessionDeliveries.length == 1 ? 'y' : 'ies'} today',
-                    style: const TextStyle(
-                        color: AppColors.success,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(children: [
-                Expanded(
-                  child: _EarningsStat('Today',
-                      '₹${todayEarning.toStringAsFixed(0)}', AppColors.success),
-                ),
-                Container(width: 1, height: 40, color: AppColors.border),
-                Expanded(
-                  child: _EarningsStat(
-                      'Pending Payout',
-                      '₹${pendingPayout.toStringAsFixed(0)}',
-                      AppColors.warning),
-                ),
+                ],
+                const SizedBox(height: 16),
+                Row(children: [
+                  Expanded(child: _EarningsStat('Today', '₹${todayEarning.toStringAsFixed(0)}', AppColors.success)),
+                  Container(width: 1, height: 40, color: AppColors.border),
+                  Expanded(child: _EarningsStat('Pending Payout', '₹${pendingPayout.toStringAsFixed(0)}', AppColors.warning)),
+                ]),
               ]),
-            ]),
-          ),
+            ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
+            const Text('Transaction History',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(height: 12),
 
-          const Text('Transaction History',
-              style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14)),
-          const SizedBox(height: 12),
-
-          // New session deliveries at the top
-          ...sessionDeliveries.reversed.map((s) {
-            final id = s['external_id'] as String? ??
-                (s['id'] as String?)?.substring(0, 10) ??
-                'PKG';
-            return txRow(
+            // Session deliveries (newest, not yet in DB)
+            ...sessionDeliveries.reversed.map((s) => _txRow(
               date: 'Today $timeStamp',
-              desc: id,
+              desc: s['external_id'] as String? ?? (s['id'] as String?)?.substring(0, 10) ?? 'PKG',
               amount: _calcEarnings(s),
               isIncome: true,
               isNew: true,
-            );
-          }),
+            )),
 
-          // Historical rows
-          ..._historicalTransactions.map((t) => txRow(
-                date: t.date,
-                desc: t.desc,
-                amount: t.amount,
-                isIncome: t.isIncome,
-              )),
-        ],
+            // Real historical transactions from DB
+            if (apiTxns.isEmpty && sessionDeliveries.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: Text('No deliveries yet', style: TextStyle(color: AppColors.textMuted))),
+              )
+            else
+              ...apiTxns.map((t) {
+                final tx = t as Map<String, dynamic>;
+                return _txRow(
+                  date: tx['date'] as String? ?? '',
+                  desc: tx['desc'] as String? ?? '',
+                  amount: (tx['amount'] as num?)?.toDouble() ?? 0.0,
+                  isIncome: tx['is_income'] as bool? ?? true,
+                );
+              }),
+          ],
+        ),
       ),
     );
   }

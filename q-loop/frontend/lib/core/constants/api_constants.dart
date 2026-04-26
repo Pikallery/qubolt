@@ -84,6 +84,7 @@ class ApiConstants {
 
   // Driver analytics
   static const String driversPerformance = '/drivers/performance';
+  static const String driverMyEarnings   = '/drivers/me/earnings';
   static String driverPerformance(String id) => '/drivers/$id/performance';
   static String driverHistory(String id)     => '/drivers/$id/history';
 
