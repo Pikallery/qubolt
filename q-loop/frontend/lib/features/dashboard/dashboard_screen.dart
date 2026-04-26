@@ -9,6 +9,7 @@ import 'widgets/metric_card.dart';
 import 'widgets/dark_sidebar.dart';
 import 'widgets/shipment_status_chart.dart';
 import 'dashboard_provider.dart';
+import '../../core/widgets/notification_bell.dart';
 
 // QUBO optimizer state for dashboard
 final _dashQuboRunningProvider = StateProvider<bool>((ref) => false);
@@ -268,6 +269,7 @@ class _TopBar extends StatelessWidget {
             ]),
           ),
           const SizedBox(width: 8),
+          const NotificationBell(),
           IconButton(
             icon: Icon(Icons.settings_outlined, color: AppColors.textSub(context), size: 20),
             onPressed: () => context.go('/settings'),

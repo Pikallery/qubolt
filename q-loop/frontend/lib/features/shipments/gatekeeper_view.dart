@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/widgets/notification_bell.dart';
 
 /// Gatekeeper mobile view — scans driver QR codes to confirm pickup / delivery.
 /// Implements the 3-way digital handshake:
@@ -112,6 +113,7 @@ class _GatekeeperViewState extends ConsumerState<GatekeeperView> {
                   fontSize: 16)),
         ]),
         actions: [
+          const NotificationBell(),
           IconButton(
             icon: Icon(
               _torchOn ? Icons.flashlight_on : Icons.flashlight_off,

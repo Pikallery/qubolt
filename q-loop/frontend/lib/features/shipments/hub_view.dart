@@ -12,6 +12,7 @@ import '../../core/widgets/api_error_widget.dart';
 import '../auth/domain/auth_provider.dart';
 import '../comms/chat_screen.dart';
 import '../comms/comms_provider.dart';
+import '../../core/widgets/notification_bell.dart';
 
 /// Hub Operator view — web-compatible (no camera dependency).
 /// Supports:
@@ -28,11 +29,22 @@ class HubView extends ConsumerStatefulWidget {
 class _HubViewState extends ConsumerState<HubView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
+  String _hubName = 'Hub Operator';
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this);
+    _fetchHubName();
+  }
+
+  Future<void> _fetchHubName() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get('/users/me');
+      final name = res.data['full_name'] as String? ?? res.data['email'] as String?;
+      if (mounted && name != null) setState(() => _hubName = name);
+    } catch (_) {}
   }
 
   @override
@@ -43,8 +55,7 @@ class _HubViewState extends ConsumerState<HubView>
 
   @override
   Widget build(BuildContext context) {
-    final auth = ref.watch(authNotifierProvider);
-    const hubId = 'HUB-751001-01'; // resolved from auth.userId in production
+    final hubName = _hubName;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -57,10 +68,10 @@ class _HubViewState extends ConsumerState<HubView>
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
+            const Row(children: [
               Icon(Icons.warehouse_outlined,
                   color: AppColors.primary, size: 18),
               SizedBox(width: 8),
@@ -70,14 +81,15 @@ class _HubViewState extends ConsumerState<HubView>
                       fontWeight: FontWeight.w700,
                       fontSize: 15)),
             ]),
-            Text(hubId,
-                style: TextStyle(
+            Text(hubName,
+                style: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10,
                     fontFamily: 'monospace')),
           ],
         ),
         actions: [
+          const NotificationBell(),
           PopupMenuButton<String>(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined,
@@ -884,6 +896,7 @@ class _HubShipmentCard extends ConsumerStatefulWidget {
 class _HubShipmentCardState extends ConsumerState<_HubShipmentCard> {
   bool _confirming = false;
   bool _driverArrived = false;
+  String? _localStatus; // overrides widget status after local confirmation
 
   @override
   void initState() {
@@ -913,11 +926,11 @@ class _HubShipmentCardState extends ConsumerState<_HubShipmentCard> {
       final dio = ref.read(dioProvider);
       await dio.patch('/shipments/$id', data: {'status': 'delivered'});
       if (mounted) {
+        setState(() => _localStatus = 'delivered');
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Arrival confirmed — manager notified'),
+          content: Text('Arrival confirmed — shipment marked delivered'),
           backgroundColor: AppColors.success,
         ));
-        widget.onConfirmed?.call();
       }
     } catch (e) {
       if (mounted) {
@@ -933,7 +946,7 @@ class _HubShipmentCardState extends ConsumerState<_HubShipmentCard> {
 
   @override
   Widget build(BuildContext context) {
-    final status = widget.shipment['status'] ?? 'pending';
+    final status = _localStatus ?? widget.shipment['status'] ?? 'pending';
     final color = AppColors.statusColor(status);
     final isInTransit = status == 'in_transit';
 
