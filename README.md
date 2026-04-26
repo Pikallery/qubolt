@@ -2,6 +2,8 @@
 
 **Q-Loop / Qubolt** is a B2B SaaS platform that eliminates empty-run inefficiencies across last-mile, return, and disposal flows. It combines a FastAPI backend, a Flutter multi-platform frontend, and quantum-inspired optimization (simulated annealing + behavioural entropy) to route shipments through Odisha's logistics network.
 
+> **Live app:** [https://qubolt-app.web.app](https://qubolt-app.web.app)
+
 > The application source lives under [`q-loop/`](q-loop/). Detailed engineering notes are in [`q-loop/README.md`](q-loop/README.md).
 
 ---
