@@ -219,83 +219,80 @@ async def by_priority(tenant: CurrentTenant, db: DBSession, _: CurrentUser):
 
 # ── Behavioral Entropy / Wave-Function ───────────────────────────────────────
 
+_entropy_cache: dict[str, tuple[float, dict]] = {}  # tenant_id -> (expires_at, result)
+
 @router.get("/behavioral-entropy")
 async def behavioral_entropy(tenant: CurrentTenant, db: DBSession, _: CurrentUser):
     """
-    'Observer Effect' — Behavioral Entropy metric.
-
-    Analyses how driver ETA accuracy (is_delayed rate) changes over time,
-    producing a 30-point 'wave-function' that compares predicted performance
-    (Quantum Optimization ON — drivers with assigned_driver_id set) vs actual
-    (all drivers, baseline).
-
-    Returns two series of 30 floats (0–100) representing:
-      - predicted: rolling ETA accuracy % under quantum routing
-      - actual:    rolling ETA accuracy % across the whole fleet
-
-    If there is not enough data the series are synthesised with a realistic
-    interference pattern so the chart always has something to render.
+    Behavioral Entropy — cached per tenant for 5 minutes to avoid repeated
+    heavy queries on large datasets.
     """
-    # Bucket shipments into 30 time-slices by created_at order
-    result = await db.execute(
-        select(
-            Shipment.id,
-            Shipment.is_delayed,
-            Shipment.assigned_driver_id,
-        )
-        .where(Shipment.tenant_id == tenant.id)
-        .order_by(Shipment.created_at.asc())
-    )
-    rows = result.all()
+    import time
+    cache_key = str(tenant.id)
+    now = time.time()
+    if cache_key in _entropy_cache:
+        expires_at, cached = _entropy_cache[cache_key]
+        if now < expires_at:
+            return cached
 
-    n = len(rows)
     buckets = 30
 
-    if n < buckets:
-        # Not enough data — generate realistic interference pattern
-        predicted = []
-        actual = []
+    # Sample latest 20K shipments — enough for a statistically valid entropy curve
+    # and avoids full-table scan over 600K rows.
+    stmt = text("""
+        WITH sample AS (
+            SELECT is_delayed, assigned_driver_id IS NOT NULL AS is_assigned, created_at
+            FROM shipments
+            WHERE tenant_id = :tenant_id
+            ORDER BY created_at DESC
+            LIMIT 20000
+        ),
+        bucketed AS (
+            SELECT
+                NTILE(:buckets) OVER (ORDER BY created_at ASC) AS bucket,
+                is_delayed,
+                is_assigned
+            FROM sample
+        )
+        SELECT
+            bucket,
+            COUNT(*)                                                        AS total,
+            SUM(CASE WHEN NOT is_delayed THEN 1 ELSE 0 END)                AS on_time,
+            SUM(CASE WHEN is_assigned AND NOT is_delayed THEN 1 ELSE 0 END) AS assigned_on_time,
+            SUM(CASE WHEN is_assigned THEN 1 ELSE 0 END)                   AS assigned_total
+        FROM bucketed
+        GROUP BY bucket
+        ORDER BY bucket
+    """)
+    result = await db.execute(stmt, {"buckets": buckets, "tenant_id": str(tenant.id)})
+    rows = result.all()
+
+    if len(rows) < buckets:
+        # Not enough data — synthesise interference pattern
+        predicted, actual = [], []
         for i in range(buckets):
             t = i / (buckets - 1)
             base = 55 + 30 * _math.sin(t * _math.pi * 1.6 + 0.4)
-            pred = min(100, base + 12 * _math.cos(t * _math.pi * 3.2))
-            act  = min(100, base - 8  * _math.sin(t * _math.pi * 2.1 + 1.1))
-            predicted.append(round(pred, 2))
-            actual.append(round(act, 2))
+            predicted.append(round(min(100, base + 12 * _math.cos(t * _math.pi * 3.2)), 2))
+            actual.append(round(min(100, base - 8 * _math.sin(t * _math.pi * 2.1 + 1.1)), 2))
         entropy_score = 42.0
     else:
-        bucket_size = n // buckets
-        predicted = []
-        actual = []
-        for b in range(buckets):
-            start = b * bucket_size
-            end   = start + bucket_size if b < buckets - 1 else n
-            slice_ = rows[start:end]
-            total  = len(slice_)
-            if total == 0:
-                predicted.append(0.0)
-                actual.append(0.0)
-                continue
-
-            # "Quantum" (assigned) vs all
-            assigned = [r for r in slice_ if r.assigned_driver_id is not None]
+        predicted, actual = [], []
+        for row in rows:
+            all_acc = round((row.on_time / row.total) * 100, 2) if row.total else 0.0
             q_acc = (
-                round((1 - sum(1 for r in assigned if r.is_delayed) / len(assigned)) * 100, 2)
-                if assigned else None
+                round((row.assigned_on_time / row.assigned_total) * 100, 2)
+                if row.assigned_total else all_acc
             )
-            all_acc = round(
-                (1 - sum(1 for r in slice_ if r.is_delayed) / total) * 100, 2
-            )
-            predicted.append(q_acc if q_acc is not None else all_acc)
+            predicted.append(q_acc)
             actual.append(all_acc)
 
-        # Behavioral entropy: stddev of (predicted - actual) differences
         diffs = [abs(p - a) for p, a in zip(predicted, actual)]
         mean_d = sum(diffs) / len(diffs)
         variance = sum((d - mean_d) ** 2 for d in diffs) / len(diffs)
         entropy_score = round(_math.sqrt(variance), 2)
 
-    return {
+    result = {
         "buckets": buckets,
         "predicted": predicted,
         "actual": actual,
@@ -308,6 +305,8 @@ async def behavioral_entropy(tenant: CurrentTenant, db: DBSession, _: CurrentUse
             "Moderate entropy — partial interference pattern detected."
         ),
     }
+    _entropy_cache[cache_key] = (now + 300, result)  # cache for 5 minutes
+    return result
 
 
 # ── Sustainability Benchmarks ─────────────────────────────────────────────────
